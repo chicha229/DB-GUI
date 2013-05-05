@@ -39,7 +39,7 @@ type
 implementation
 
 uses
-  uUtils;
+  AVK.Core.Utils;
 
 {$R *.dfm}
 

@@ -6,7 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Avk.Gui.BaseForm, cxLookAndFeelPainters, StdCtrls, cxButtons, ExtCtrls,
   Menus, cxControls, cxContainer, cxEdit, cxGroupBox, uFormErrors,
-  cxGraphics, cxLookAndFeels;
+  cxGraphics, cxLookAndFeels, dxSkinsCore, dxSkinsDefaultPainters;
 
 type
   TCustomEditorForm = class (TBaseForm)
@@ -39,7 +39,7 @@ type
 implementation
 
 uses
-  uUtils, uDevExpressEditorsPost, uLookupFilter, Avk.Core.Exceptions,
+  AVK.Core.Utils, AVK.DX.PostEditors, AVK.DX.LookupFilter, Avk.Core.Exceptions,
   Avk.Gui.GlobalSettings;
 
 {$R *.dfm}

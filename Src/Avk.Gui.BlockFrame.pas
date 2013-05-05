@@ -133,7 +133,7 @@ uses
   cxBlobEdit, cxMemo, cxImage,
   cxDBLookupComboBox, uADCompClient,
   uLookupFilter,
-  Avk.Gui.CustomMainDM, Avk.Gui.CustomMainForm, uUtils;
+  Avk.Gui.CustomMainDM, Avk.Gui.CustomMainForm, AVK.Core.Utils;
 
 type
   TcxCustomEditCrack = class (TcxCustomEdit)

@@ -27,7 +27,7 @@ implementation
 uses
   SysUtils, Data.DB, System.Generics.Collections,
   uADStanParam,
-  uUtils;
+  AVK.Core.Utils;
 
 type
   TFBDBDepended = class (TDBDependend)

@@ -38,7 +38,7 @@ implementation
 
 uses
   TabOrder,
-  uUtils;
+  AVK.Core.Utils;
 
 const
   FormBoundsSettingsName = 'Bounds';

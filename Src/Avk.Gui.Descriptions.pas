@@ -346,7 +346,7 @@ implementation
 
 uses
   System.SysUtils, System.Math,
-  uUtils;
+  AVK.Core.Utils;
 
 var
   FBlocksManager: TBlocksManager;
