@@ -132,7 +132,7 @@ uses
   cxSpinEdit, cxCheckBox, cxCalc, cxCurrencyEdit, cxCalendar, cxTimeEdit,
   cxBlobEdit, cxMemo, cxImage,
   cxDBLookupComboBox, uADCompClient,
-  uLookupFilter,
+  AVK.DX.LookupFilter,
   Avk.Gui.CustomMainDM, Avk.Gui.CustomMainForm, AVK.Core.Utils;
 
 type

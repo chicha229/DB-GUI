@@ -346,51 +346,103 @@ end;
 
 begin
   inherited;
-  // зависимостей от своих параметров - нет
-  if Sender = Self then
-    Exit;
 
-  RefreshRefQueries;
-  RefreshChildParams;
-  RefreshSelfParams;
+  // свои параметры не мен€ютс€ после открыти€ фрейма
+  if Sender <> Self then
+  begin
+    RefreshRefQueries;
+    RefreshChildParams;
+    RefreshSelfParams;
+  end;
 end;
 
 function TFormFrame.Open: boolean;
-var
-  OpenedCount, LoopCounter: integer;
-  Frame: TBlockFrame;
-  FrameOpened: boolean;
-  AllParamsBinded: boolean;
-begin
-  Self.IsOpened := false;
-  for Frame in FFrames.Values do
-    Frame.IsOpened := false;
 
-  LoopCounter := 0;
-  repeat
-    OpenedCount := 0;
+  procedure OpenChildFrames;
+  var
+    OpenedCount, LoopCounter: integer;
+    Frame: TBlockFrame;
+    FrameOpened: boolean;
+    AllParamsBinded: boolean;
+  begin
     for Frame in FFrames.Values do
-      if not Frame.IsOpened then
-      begin
-        BindFrameParamsFromSource(Frame, AllParamsBinded);
-        if AllParamsBinded then
+        Frame.IsOpened := false;
+
+    LoopCounter := 0;
+    repeat
+      OpenedCount := 0;
+      for Frame in FFrames.Values do
+        if not Frame.IsOpened then
         begin
-          try
-            FrameOpened := Frame.Open;
-          except
-            FrameOpened := false;
-          end;
-          if FrameOpened then
+          BindFrameParamsFromSource(Frame, AllParamsBinded);
+          if AllParamsBinded then
           begin
-            Frame.IsOpened := true;
-            Inc(OpenedCount);
+            try
+              FrameOpened := Frame.Open;
+            except
+              FrameOpened := false;
+            end;
+            if FrameOpened then
+            begin
+              Frame.IsOpened := true;
+              Inc(OpenedCount);
+            end;
           end;
         end;
+      Inc(LoopCounter);
+    until (OpenedCount = 0) or (LoopCounter > FFrames.Count + 1);
+    if LoopCounter > FFrames.Count + 1 then
+      raise Exception.Create('÷икл зависимостей при открытии формы');
+  end;
+
+  procedure SetReqQueriesParamValues;
+  var
+    PV: TParamValues;
+    ParamName: string;
+    RefId: integer;
+    FrameChangeId: integer;
+    RefBind: TBlockRefBind;
+    RefQuery: TADQuery;
+    RefFrame: TBlockFrame;
+    Ref: TBlockRef;
+  begin
+    PV := ParamValues;
+    for ParamName in PV.Keys do
+      // измененное значение. какой из рефов зависит от этого
+      for RefFrame in FFrames.Values do
+      begin
+        FrameChangeId := RefFrame.BeginParamChanging;
+        try
+          for RefId in RefFrame.BlockDescription.BlockRefs.Keys do
+          begin
+            RefQuery := nil;
+            Ref := RefFrame.BlockDescription.BlockRefs[RefId];
+            for RefBind in Ref.Binds.Values do
+              if
+                (RefBind.SourceBlockId = 0) and
+                (RefBind.SourceParam = ParamName)
+              then
+              begin
+                RefQuery := (CustomMainDM.GetRefDataSource(Ref.RefsTo).DataSet as TADQuery);
+                RefQuery.ParamByName(ParamName).Value := PV[ParamName];
+              end;
+            if Assigned(RefQuery) then
+            begin
+              RefQuery.Close;
+              RefQuery.Open;
+            end;
+          end;
+        finally
+          RefFrame.EndParamChanging(FrameChangeId);
+        end;
       end;
-    Inc(LoopCounter);
-  until (OpenedCount = 0) or (LoopCounter > FFrames.Count + 1);
-  if LoopCounter > FFrames.Count + 1 then
-    raise Exception.Create('÷икл зависимостей при открытии формы');
+  end;
+
+begin
+  Self.IsOpened := false;
+
+  OpenChildFrames;
+  SetReqQueriesParamValues;
 
   Self.IsOpened := true;
   Result := true;

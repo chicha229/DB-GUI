@@ -104,7 +104,7 @@ implementation
 uses
   Generics.Collections,
   Avk.Gui.CustomMainDM, Avk.Gui.SearchFieldsSelect,
-  AVK.Core.Utils, uLookupFilter;
+  AVK.Core.Utils, AVK.DX.LookupFilter;
 
 const
   cGridAutoWidth = 'GRID_AUTO_WIDTH';
