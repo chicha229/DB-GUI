@@ -71,6 +71,7 @@ var
   LastVisibleCP: TWinControl;
   T: TcxTabSheet;
   X, Y: integer;
+  S: TSplitter;
 begin
   if APanel.ItemsDrawStyle = pddTabs then
   begin
@@ -155,31 +156,42 @@ begin
         C := F;
       end;
 
-      if Assigned(Block) then
+      C.Width := Max(C.Constraints.MinWidth, 200);
+      C.Height := Max(C.Constraints.MinHeight, 200);
+{
+      C.Width := C.Constraints.MinWidth;
+      C.Height := C.Constraints.MinHeight;
+}
+      if (Assigned(Block) and Block.Visible) or Assigned(PD) then
       begin
-        if Block.Visible then
-        begin
-          case APanel.ItemsDrawStyle of
-            pddLeft: begin C.Align := alLeft; C.Left := X; Inc(X, C.Width); end;
-            pddRight: begin C.Align := alRight; C.Left := X; Dec(X, C.Width); end;
-            pddTop: begin C.Align := alTop; C.Top := Y; Inc(Y, C.Height); end;
-            pddBottom: begin C.Align := alBottom; C.Top := Y; Dec(Y, C.Height); end;
-          end;
-          LastVisibleCP := C;
-        end
-        else
-        begin
-          if APanel.ItemsDrawStyle = pddTabs then
-            T.Visible := false
-          else
-            C.Hide;
-        end
-      end
-      else
+        S := TSplitter.Create(Self);
+        S.Parent := AParent;
+        case APanel.ItemsDrawStyle of
+          pddLeft: begin C.Align := alLeft; C.Left := X; Inc(X, C.Width + 3); end;
+          pddRight: begin C.Align := alRight; C.Left := X; Dec(X, C.Width + 3); end;
+          pddTop: begin C.Align := alTop; C.Top := Y; Inc(Y, C.Height + 3); end;
+          pddBottom: begin C.Align := alBottom; C.Top := Y; Dec(Y, C.Height + 3); end;
+        end;
+        S.Align := C.Align;
+        case APanel.ItemsDrawStyle of
+          pddLeft: S.Left := C.Left + C.Width + 3;
+          pddRight: S.Left := C.Left - 3;
+          pddTop: S.Top := C.Top + C.Height + 3;
+          pddBottom: S.Top := C.Top - 3;
+        end;
         LastVisibleCP := C;
+      end;
+      if Assigned(Block) and (not Block.Visible) then
+        if APanel.ItemsDrawStyle = pddTabs then
+          T.Visible := false
+        else
+          C.Hide;
     end;
     if Assigned(LastVisibleCP) then
+    begin
       LastVisibleCP.Align := alClient;
+      S.Hide;
+    end;
   finally
     L.Free;
   end;
@@ -366,7 +378,7 @@ function TFormFrame.Open: boolean;
     AllParamsBinded: boolean;
   begin
     for Frame in FFrames.Values do
-        Frame.IsOpened := false;
+      Frame.IsOpened := false;
 
     LoopCounter := 0;
     repeat

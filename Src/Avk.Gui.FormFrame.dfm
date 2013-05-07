@@ -3,7 +3,7 @@ inherited FormFrame: TFormFrame
   ExplicitHeight = 326
   inherited TopLabel: TcxLabel
     Style.IsFontAssigned = True
-    AnchorX = 206
+    AnchorX = 232
     AnchorY = 20
   end
   inherited ClientPanel: TPanel
@@ -17,11 +17,12 @@ inherited FormFrame: TFormFrame
     object FramesScrollBox: TScrollBox
       Left = 0
       Top = 57
-      Width = 412
+      Width = 463
       Height = 181
       Align = alClient
       BorderStyle = bsNone
       TabOrder = 1
+      ExplicitWidth = 412
     end
   end
   inherited BarManager: TdxBarManager

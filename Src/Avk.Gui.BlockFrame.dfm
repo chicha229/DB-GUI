@@ -1,28 +1,34 @@
 inherited BlockFrame: TBlockFrame
-  Width = 412
-  ExplicitWidth = 412
+  Width = 463
+  Height = 254
+  Constraints.MinHeight = 120
+  Constraints.MinWidth = 130
+  ExplicitWidth = 463
+  ExplicitHeight = 254
   inherited TopLabel: TcxLabel
     Style.IsFontAssigned = True
     ExplicitWidth = 412
-    Width = 412
-    AnchorX = 206
+    Width = 463
+    AnchorX = 232
     AnchorY = 20
   end
   inherited ClientPanel: TPanel
     Top = 88
-    Width = 412
-    Height = 152
+    Width = 463
+    Height = 166
     ExplicitTop = 88
     ExplicitWidth = 412
     ExplicitHeight = 152
     object ParamsScrollBox: TScrollBox
       Left = 0
       Top = 0
-      Width = 412
-      Height = 152
+      Width = 463
+      Height = 166
       Align = alClient
       BorderStyle = bsNone
       TabOrder = 0
+      ExplicitWidth = 153
+      ExplicitHeight = 105
     end
   end
   object BarManager: TdxBarManager
