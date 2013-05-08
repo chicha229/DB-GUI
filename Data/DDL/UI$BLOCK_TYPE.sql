@@ -1,0 +1,5 @@
+INSERT INTO UI$BLOCK_TYPE (ID, NAME) VALUES ('form', 'Форма');
+INSERT INTO UI$BLOCK_TYPE (ID, NAME) VALUES ('procedure', 'Процедура');
+
+COMMIT WORK;
+

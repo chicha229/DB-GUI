@@ -1,0 +1,5 @@
+INSERT INTO UI$MENU_ITEM_TYPE (ID, NAME) VALUES ('folder', 'Папка');
+INSERT INTO UI$MENU_ITEM_TYPE (ID, NAME) VALUES ('block', 'Блок');
+
+COMMIT WORK;
+

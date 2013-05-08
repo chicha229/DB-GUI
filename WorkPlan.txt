@@ -43,7 +43,9 @@
   - использовать
     - в source_block и source_param в параметрах
       - в form_child
-      - в форме
+      - в панелях формы
+      - в блоках формы
+      - в параметрах формы
     - в action_bind
     - в RefQuery
       - в блоке

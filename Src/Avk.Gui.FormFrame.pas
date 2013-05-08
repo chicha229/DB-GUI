@@ -73,6 +73,7 @@ var
   X, Y: integer;
   S: TSplitter;
 begin
+  S := nil;
   if APanel.ItemsDrawStyle = pddTabs then
   begin
     PC := TcxPageControl.Create(Self);
@@ -123,6 +124,8 @@ begin
           P.Parent := AParent;
           P.Caption := '';
           P.BevelOuter := bvNone;
+          P.Constraints.MinWidth := 200;
+          P.Constraints.MinHeight := 200;
           CP := P;
           FParentControls.Add(P);
         end
@@ -156,12 +159,9 @@ begin
         C := F;
       end;
 
-      C.Width := Max(C.Constraints.MinWidth, 200);
-      C.Height := Max(C.Constraints.MinHeight, 200);
-{
       C.Width := C.Constraints.MinWidth;
       C.Height := C.Constraints.MinHeight;
-}
+
       if (Assigned(Block) and Block.Visible) or Assigned(PD) then
       begin
         S := TSplitter.Create(Self);
@@ -190,7 +190,8 @@ begin
     if Assigned(LastVisibleCP) then
     begin
       LastVisibleCP.Align := alClient;
-      S.Hide;
+      if Assigned(S) then
+        S.Hide;
     end;
   finally
     L.Free;

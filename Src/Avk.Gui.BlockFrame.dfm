@@ -1,8 +1,8 @@
 inherited BlockFrame: TBlockFrame
   Width = 463
   Height = 254
-  Constraints.MinHeight = 120
-  Constraints.MinWidth = 130
+  Constraints.MinHeight = 200
+  Constraints.MinWidth = 200
   ExplicitWidth = 463
   ExplicitHeight = 254
   inherited TopLabel: TcxLabel

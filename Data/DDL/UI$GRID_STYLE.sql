@@ -1,0 +1,5 @@
+INSERT INTO UI$GRID_STYLE (ID, NAME) VALUES ('rows', 'Строки');
+INSERT INTO UI$GRID_STYLE (ID, NAME) VALUES ('columns', 'Колонки');
+
+COMMIT WORK;
+
