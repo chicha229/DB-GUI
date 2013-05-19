@@ -159,8 +159,8 @@ begin
         C := F;
       end;
 
-      C.Width := C.Constraints.MinWidth;
-      C.Height := C.Constraints.MinHeight;
+      C.Width := C.Constraints.MinWidth + 8;
+      C.Height := C.Constraints.MinHeight + 8;
 
       if (Assigned(Block) and Block.Visible) or Assigned(PD) then
       begin
@@ -288,7 +288,7 @@ begin
             then
             begin
               RefQuery := (CustomMainDM.GetRefDataSource(Ref.RefsTo).DataSet as TADQuery);
-              RefQuery.ParamByName(ParamName).Value := Sender.ParamValues[ParamName];
+              RefQuery.ParamByName(RefBind.DestinationParam).Value := Sender.ParamValues[ParamName];
             end;
           if Assigned(RefQuery) then
           begin
@@ -379,7 +379,10 @@ function TFormFrame.Open: boolean;
     AllParamsBinded: boolean;
   begin
     for Frame in FFrames.Values do
+    begin
       Frame.IsOpened := false;
+      Frame.IsOpening := true;
+    end;
 
     LoopCounter := 0;
     repeat
@@ -406,58 +409,51 @@ function TFormFrame.Open: boolean;
     until (OpenedCount = 0) or (LoopCounter > FFrames.Count + 1);
     if LoopCounter > FFrames.Count + 1 then
       raise Exception.Create('Цикл зависимостей при открытии формы');
+
+    for Frame in FFrames.Values do
+      Frame.IsOpening := false;
   end;
 
-  procedure SetReqQueriesParamValues;
+  procedure SetRefQueriesParamValues;
   var
-    PV: TParamValues;
-    ParamName: string;
-    RefId: integer;
-    FrameChangeId: integer;
-    RefBind: TBlockRefBind;
+    F: TBlockFrame;
+    R: TBlockRef;
+    B: TBlockRefBind;
     RefQuery: TADQuery;
-    RefFrame: TBlockFrame;
-    Ref: TBlockRef;
+    ParamValuesChanged: boolean;
   begin
-    PV := ParamValues;
-    for ParamName in PV.Keys do
-      // измененное значение. какой из рефов зависит от этого
-      for RefFrame in FFrames.Values do
+    for F in FFrames.Values do
+      for R in F.BlockDescription.BlockRefs.Values do
       begin
-        FrameChangeId := RefFrame.BeginParamChanging;
-        try
-          for RefId in RefFrame.BlockDescription.BlockRefs.Keys do
+        RefQuery := (CustomMainDM.GetRefDataSource(R.RefsTo).DataSet as TADQuery);
+        if not Assigned(RefQuery) then
+          Continue;
+        ParamValuesChanged := false;
+        for B in R.Binds.Values do
+          if RefQuery.ParamByName(B.DestinationParam).Value <>
+            FFrames[B.SourceBlockId].ParamValues[B.SourceParam] then
           begin
-            RefQuery := nil;
-            Ref := RefFrame.BlockDescription.BlockRefs[RefId];
-            for RefBind in Ref.Binds.Values do
-              if
-                (RefBind.SourceBlockId = 0) and
-                (RefBind.SourceParam = ParamName)
-              then
-              begin
-                RefQuery := (CustomMainDM.GetRefDataSource(Ref.RefsTo).DataSet as TADQuery);
-                RefQuery.ParamByName(ParamName).Value := PV[ParamName];
-              end;
-            if Assigned(RefQuery) then
-            begin
-              RefQuery.Close;
-              RefQuery.Open;
-            end;
+            RefQuery.ParamByName(B.DestinationParam).Value :=
+              FFrames[B.SourceBlockId].ParamValues[B.SourceParam];
+            ParamValuesChanged := true;
           end;
-        finally
-          RefFrame.EndParamChanging(FrameChangeId);
+        if ParamValuesChanged then
+        begin
+          RefQuery.Close;
+          RefQuery.Open;
         end;
       end;
   end;
 
 begin
   Self.IsOpened := false;
+  Self.IsOpening := true;
 
   OpenChildFrames;
-  SetReqQueriesParamValues;
+  SetRefQueriesParamValues;
 
   Self.IsOpened := true;
+  Self.IsOpening := false;
   Result := true;
 end;
 

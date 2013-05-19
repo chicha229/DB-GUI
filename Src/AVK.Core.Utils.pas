@@ -49,6 +49,9 @@ function  GetComputerNetName: string;
 function VarArraysIsEqual(const A, B: variant): boolean;
 function VarsIsEqual(const A, B: variant): boolean;
 
+const
+  CrLf: string = #13#10;
+
 var
   UseExeFolderForIni: boolean = false;
 

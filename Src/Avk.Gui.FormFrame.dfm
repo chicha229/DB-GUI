@@ -22,7 +22,6 @@ inherited FormFrame: TFormFrame
       Align = alClient
       BorderStyle = bsNone
       TabOrder = 1
-      ExplicitWidth = 412
     end
   end
   inherited BarManager: TdxBarManager

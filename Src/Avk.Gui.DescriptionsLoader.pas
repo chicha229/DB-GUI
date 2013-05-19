@@ -644,7 +644,7 @@ begin
   ChildRefBindsQuery.Locate('form_child;ref', VarArrayOf([ChildId, BlockRef.ID]), []);
   while
     (ChildRefBindsQuery.FieldByName('ref').AsInteger = BlockRef.ID) and
-    (ChildRefBindsQuery.FieldByName('child_id').AsInteger = ChildId) and
+    (ChildRefBindsQuery.FieldByName('form_child').AsInteger = ChildId) and
     (not ChildRefBindsQuery.EOF)
   do
   begin

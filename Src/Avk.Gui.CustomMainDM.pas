@@ -24,12 +24,17 @@ type
   private
     FDBDependend: TDBDependend;
     FCommonRefs: TObjectDictionary<string, TDataSource>;
+    FLogDetails: TStrings;
+
     function GetDBDependend: TDBDependend;
+    procedure LogRefQueryOpen(Sender: TDataSet);
     { Private declarations }
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     { Public declarations }
+    procedure LogQueryOpen(Q: TADQuery; Msg: string);
+
     function GetDBType: TSupportedDB; virtual; abstract;
     property DBDependend: TDBDependend read GetDBDependend;
     function GetRefDataSource(ARefBlockName: string): TDataSource;
@@ -44,6 +49,9 @@ implementation
 
 {%CLASSGROUP 'Vcl.Controls.TControl'}
 
+uses
+  CodeSiteLogging, uADStanParam;
+
 {$R *.dfm}
 
 type
@@ -54,11 +62,13 @@ constructor TCustomMainDataModule.Create(AOwner: TComponent);
 begin
   inherited;
   FCommonRefs := TObjectDictionary<string, TDataSource>.Create([]);
+  FLogDetails := TStringList.Create;
 end;
 
 destructor TCustomMainDataModule.Destroy;
 begin
   FCommonRefs.Free;
+  FLogDetails.Free;
   inherited;
 end;
 
@@ -67,6 +77,11 @@ begin
   if not Assigned(FDBDependend) then
     FDBDependend := TDBDependendFactory.CreateDependend(GetDBType);
   Result := FDBDependend;
+end;
+
+procedure TCustomMainDataModule.LogRefQueryOpen(Sender: TDataSet);
+begin
+  LogQueryOpen(Sender as TADQuery, 'ref query open');
 end;
 
 function TCustomMainDataModule.GetRefDataSource(
@@ -89,9 +104,11 @@ begin
     end;
     Q := TADQuery.Create(Self);
     Q.Connection := MainConnection;
+    Q.AfterOpen := LogRefQueryOpen;
     DBDependend.FillQuery(P, Q);
     Result := TDataSource.Create(Self);
     Result.DataSet := Q;
+    FCommonRefs.Add(ARefBlockName, Result);
   end
   else
     Result := FCommonRefs[ARefBlockName];
@@ -101,6 +118,25 @@ procedure TCustomMainDataModule.OnRefreshProcedure(AProcedureName: string);
 begin
   if FCommonRefs.ContainsKey(AProcedureName) then
     FCommonRefs[AProcedureName].DataSet.Refresh;
+end;
+
+procedure TCustomMainDataModule.LogQueryOpen(Q: TADQuery; Msg: string);
+var
+  i: Integer;
+  ParamValue: string;
+begin
+  FLogDetails.Clear;
+  FLogDetails.Add(Q.Sql.Text);
+  for i := 0 to Q.Params.Count - 1 do
+  begin
+    try
+      ParamValue := Q.Params[i].AsString;
+    except
+      ParamValue := '';
+    end;
+    FLogDetails.Add(Format('%s = %s', [Q.Params[i].Name, ParamValue]));
+  end;
+  CodeSite.Send(Msg, FLogDetails);
 end;
 
 procedure TCustomMainDataModule.FillQueryFields(AQuery: TADQuery; ABlock: TBlockDescription);
