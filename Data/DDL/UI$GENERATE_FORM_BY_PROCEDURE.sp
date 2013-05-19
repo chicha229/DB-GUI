@@ -55,12 +55,20 @@ begin
 
   insert into ui$block_param (
       block, param, param_direction, data_type, caption, visible,
-      source_form, source_block, source_child, source_param,
       index_in_key, index_in_name, order_num, call_order_num)
     select
       :l_form_name, p.param, p.param_direction, p.data_type, p.caption, 0,
-      :l_form_name, :l_procedure_id, :l_form_child, p.param,
       p.index_in_key, p.index_in_name, p.order_num, p.call_order_num
+    from ui$block_param p
+    where p."BLOCK" = :l_procedure_id;
+
+  insert into ui$form_child_param (
+      form_child, form, block, param,
+      source_block, source_child, source_param
+    )
+  select
+      :l_form_child, :l_form_name, :l_procedure_id, p.param,
+      :l_form_name, null, p.param
     from ui$block_param p
     where p."BLOCK" = :l_procedure_id;
 end

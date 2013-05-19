@@ -71,10 +71,10 @@ begin
     returning id into :l_edit_child;
 
   -- входные параметры процедуры - первичный ключ
-  insert into ui$block_param (block, param, param_direction, data_type, order_num, source_child, source_param, caption, call_order_num, visible)
+  insert into ui$block_param (block, param, param_direction, data_type, order_num, caption, call_order_num, visible)
     select
       :l_form_name, 'I_' || f.field_name, 'in', f.field_type_name,
-      f.index_on_key, :l_cursor_child, 'I_' || f.field_name,
+      f.index_on_key,
       coalesce(f.field_description, f.field_name),
       f.index_on_key, 0
     from ui$get_table_fields(:i_table_name) f
@@ -83,7 +83,19 @@ begin
       :i_action <> 'insert' and
       1=1;
 
-  -- связи между блоками
+  -- бинд параметров курсора от параметров формы
+  insert into ui$form_child_param (
+      form_child, form, block,
+      param, read_only,
+      source_block, source_child, source_param
+    )
+    select
+      :l_cursor_child, :l_form_name, :i_table_name || '_CR',
+      'I_' || f.field_name, case when :i_action = 'delete' then 1 end,
+      :l_form_name, null, f.field_name
+    from ui$get_table_fields(:i_table_name) f;
+
+  -- бинд значений курсора к процедуре редактирования
   insert into ui$form_child_param (
       form_child, form, block,
       param, read_only,

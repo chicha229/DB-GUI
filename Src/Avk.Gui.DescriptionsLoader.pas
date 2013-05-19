@@ -227,8 +227,6 @@ begin
     P.IndexInParentFields := BlockParamsQuery.FieldByName('index_in_parent').AsInteger;
     P.Group := BlockParamsQuery.FieldByName('group_name').AsString;
     P.EnablerParamName := BlockParamsQuery.FieldByName('enabler_param').AsString;
-    P.SourceBlockId := BlockParamsQuery.FieldByName('source_child').AsInteger;
-    P.SourceParamName := BlockParamsQuery.FieldByName('source_param').AsString;
     P.OrderNum := BlockParamsQuery.FieldByName('order_num').AsInteger;
     P.CallOrderNum := BlockParamsQuery.FieldByName('call_order_num').AsInteger;
 

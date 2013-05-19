@@ -806,9 +806,10 @@ begin
     begin
       RC := RefControls[R.ID];
       Q := (RC.FEditorControl as TcxLookupComboBox).Properties.ListSource.DataSet as TADQuery;
-      for RB in R.Binds.Values do
-        if RB.SourceBlockId = 0 then
-          Q.ParamByName(RB.DestinationParam).Value := ParamValues[RB.SourceParam];
+      if BlockDescription.ChildId = 0 then
+        for RB in R.Binds.Values do
+          if RB.SourceBlockId = 0 then
+            Q.ParamByName(RB.DestinationParam).Value := ParamValues[RB.SourceParam];
       Q.Open;
       CustomMainDM.FillQueryFields(Q, BlocksManager.Blocks[R.RefsTo]);
     end;

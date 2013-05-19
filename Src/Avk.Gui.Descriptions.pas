@@ -998,11 +998,13 @@ begin
         'Параметр %s - задан исходный блок, но не задан исходный параметр',
         [P.Name]
       );
+    {
     if (P.SourceBlockId = 0) and (P.SourceParamName <> '') then
       AddValidationErrorFmt(
         'Параметр %s - задан исходный параметр, но не задан исходный блок',
         [P.Name]
       );
+    }
   end;
 
   for Block in Blocks.Values do
