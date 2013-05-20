@@ -989,26 +989,21 @@ procedure TFormDescription.ValidateInternal;
 var
   P: TParamDescription;
   Block: TBlockDescription;
+  SourceBlock: TBlockDescription;
 begin
   inherited;
   for P in Params.Values do
-  begin
     if (P.SourceBlockId <> 0) and (P.SourceParamName = '') then
       AddValidationErrorFmt(
         'Параметр %s - задан исходный блок, но не задан исходный параметр',
         [P.Name]
       );
-    {
-    if (P.SourceBlockId = 0) and (P.SourceParamName <> '') then
-      AddValidationErrorFmt(
-        'Параметр %s - задан исходный параметр, но не задан исходный блок',
-        [P.Name]
-      );
-    }
-  end;
 
   for Block in Blocks.Values do
     for P in Block.Params.Values do
+    begin
+      if P.SourceParamName = '' then
+        Continue;
       if P.SourceBlockId <> 0 then
       begin
         if not Blocks.ContainsKey(P.SourceBlockId) then
@@ -1021,7 +1016,16 @@ begin
             'Исходный блок параметра %s (%d) - не DataSet',
             [P.Name, P.SourceBlockId]
           );
-      end;
+        SourceBlock := Blocks[P.SourceBlockId];
+      end
+      else
+        SourceBlock := Self;
+      if not Assigned(SourceBlock.FindParam(P.SourceParamName)) then
+        AddValidationErrorFmt(
+          'Исходный блок параметра %s (%s) не найден',
+          [P.Name, P.SourceParamName]
+        );
+    end;
 end;
 
 { TBlockAction }
