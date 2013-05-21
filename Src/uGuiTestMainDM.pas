@@ -4,7 +4,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, Avk.Gui.CustomMainDM, uADGUIxIntf,
-  uADGUIxConsoleWait, uADStanIntf, uADStanOption, uADStanError, uADPhysIntf,
+  uADStanIntf, uADStanOption, uADStanError, uADPhysIntf,
   uADStanDef, uADStanPool, uADStanAsync, uADPhysManager, uADPhysOracle, Data.DB,
   uADCompClient, uADCompGUIx, uADGUIxFormsWait, uADPhysIB, Vcl.ImgList,
   Vcl.Controls, Avk.Gui.DbDependend, cxStyles, cxClasses, cxContainer, cxEdit;

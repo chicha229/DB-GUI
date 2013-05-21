@@ -121,7 +121,6 @@
             <Form>CustomMainForm</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="..\_Core\TabOrder.pas"/>
         <DCCReference Include="Src\Avk.Gui.BaseForm.pas">
             <Form>BaseForm</Form>
         </DCCReference>
@@ -154,6 +153,7 @@
         <DCCReference Include="Src\Avk.Gui.SearchFieldsSelect.pas">
             <Form>SelectSearchFieldsForm</Form>
         </DCCReference>
+        <DCCReference Include="..\_Core\TabOrder.pas"/>
         <None Include="WorkPlan.txt"/>
         <None Include="рефакторинг.txt"/>
         <BuildConfiguration Include="Release">

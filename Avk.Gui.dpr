@@ -12,7 +12,6 @@ uses
   Avk.Gui.DbDependend in 'Src\Avk.Gui.DbDependend.pas',
   Avk.Gui.FormFrame in 'Src\Avk.Gui.FormFrame.pas' {FormFrame: TFrame},
   Avk.Gui.CustomMainForm in 'Src\Avk.Gui.CustomMainForm.pas' {CustomMainForm},
-  TabOrder in '..\_Core\TabOrder.pas',
   Avk.Gui.BaseForm in 'Src\Avk.Gui.BaseForm.pas' {BaseForm},
   Avk.Gui.CustomEditorForm in 'Src\Avk.Gui.CustomEditorForm.pas' {CustomEditorForm},
   Avk.Gui.ModalFrameForm in 'Src\Avk.Gui.ModalFrameForm.pas' {FrameModalForm},
@@ -24,7 +23,8 @@ uses
   uGuiTestsMain in 'Src\uGuiTestsMain.pas' {GuiTestMainForm},
   Avk.Gui.FormsMenuFrame in 'Src\Avk.Gui.FormsMenuFrame.pas' {FormsMenuFrame: TFrame},
   Avk.Core.Helpers in 'Src\Avk.Core.Helpers.pas',
-  Avk.Gui.SearchFieldsSelect in 'Src\Avk.Gui.SearchFieldsSelect.pas' {SelectSearchFieldsForm};
+  Avk.Gui.SearchFieldsSelect in 'Src\Avk.Gui.SearchFieldsSelect.pas' {SelectSearchFieldsForm},
+  TabOrder in '..\_Core\TabOrder.pas';
 
 {$R *.res}
 

@@ -3,7 +3,7 @@ unit Avk.Gui.CustomMainDM;
 interface
 
 uses
-  System.SysUtils, System.Classes, uADGUIxIntf, uADGUIxConsoleWait, uADStanIntf,
+  System.SysUtils, System.Classes, uADGUIxIntf, uADStanIntf,
   uADStanOption, uADStanError, uADPhysIntf, uADStanDef, uADStanPool,
   uADStanAsync, uADPhysManager, Data.DB, uADCompClient, uADPhysOracle,
   uADCompGUIx, uADGUIxFormsWait,
