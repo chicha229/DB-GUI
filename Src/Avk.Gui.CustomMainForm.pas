@@ -50,7 +50,7 @@ begin
   CustomMainDM := Self.GetMainDMClass.Create(Application);
   TDescriptionsLoaderDM.Execute(CustomMainDM.MainConnection);
 
-  FGuiObjectsFrame := CreateBlockFrame(BlocksManager.Blocks['CR_UI$MENU'], Self);
+  FGuiObjectsFrame := CreateBlockFrame(BlocksManager.Blocks['UI$MENU_CR'], Self);
   FGuiObjectsFrame.Build(Self);
   FGuiObjectsFrame.Open;
   FGuiObjectsFrame.Align := alLeft;

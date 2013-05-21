@@ -50,6 +50,7 @@ type
     procedure SearchEditPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure SearchEditPropertiesChange(Sender: TObject);
+    procedure QueryAfterOpen(DataSet: TDataSet);
   private
     FConnection: TADConnection;
     function GetProcedureDescription: TProcedureDescription;
@@ -392,6 +393,7 @@ end;
 
 function TProcedureFrame.Open: boolean;
 begin
+  IsOpening := true;
   if not Assigned(Connection) then
     Connection := CustomMainDM.MainConnection;
   Result := OpenQuery;
@@ -400,6 +402,7 @@ begin
     FillFields;
     ApplySummaryRow;
   end;
+  IsOpening := false;
 end;
 
 procedure TProcedureFrame.RefreshData;
@@ -486,6 +489,13 @@ begin
   finally
     EndParamChanging(ChangeId);
   end;
+end;
+
+procedure TProcedureFrame.QueryAfterOpen(DataSet: TDataSet);
+begin
+  inherited;
+  CustomMainDM.LogQueryOpen(DataSet as TADQuery, 'procedure open');
+  PostFieldsToParamValues;
 end;
 
 procedure TProcedureFrame.QueryAfterPost(DataSet: TDataSet);

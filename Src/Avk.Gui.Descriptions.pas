@@ -186,6 +186,7 @@ type
     FSortedActions: TArray<TBlockAction>;
     FSortedParams: TArray<TParamDescription>;
     FCallSortedParams: TArray<TParamDescription>;
+    FValidateErrors: TStrings;
 
     procedure SetDisplayLabel(const Value: string);
     procedure SetCustomClassName(const Value: string);
@@ -210,6 +211,11 @@ type
     function GetSortedParams: TArray<TParamDescription>;
     function GetSortedActions: TArray<TBlockAction>;
     function GetCallSortedParams: TArray<TParamDescription>;
+  protected
+    procedure AddValidationError(AErrorText: string);
+    procedure AddValidationErrorFmt(AErrorTextFmt: string; AArgs: array of const);
+
+    procedure ValidateInternal; virtual;
   public
     constructor Create; virtual;
     destructor Destroy; override;
@@ -252,7 +258,7 @@ type
     property CallSortedParams: TArray<TParamDescription> read GetCallSortedParams;
     property SortedActions: TArray<TBlockAction> read GetSortedActions;
 
-    procedure Validate; virtual;
+    procedure Validate;
   end;
 
   TBlocksManager = class (TObject)
@@ -273,8 +279,9 @@ type
 
     procedure SetParamsToGridDirection(const Value: TDrawDirection);
     procedure SetProcedureName(const Value: string);
+  protected
+    procedure ValidateInternal; override;
   public
-    procedure Validate; override;
 
     property ProcedureName: string read FProcedureName write SetProcedureName;
 
@@ -323,11 +330,12 @@ type
     procedure SetRootPanel(const Value: TPanelDescription);
     procedure SetMainProcedureName(const Value: string);
     procedure SetHeaderVisible(const Value: boolean);
+  protected
+    procedure ValidateInternal; override;
   public
     constructor Create; override;
     destructor Destroy; override;
 
-    procedure Validate; override;
 
     property Blocks: TObjectDictionary<integer, TBlockDescription> read FBlocks;
     property RootPanel: TPanelDescription read FRootPanel write SetRootPanel;
@@ -460,6 +468,17 @@ begin
   FParentFieldNames := '';
 end;
 
+procedure TBlockDescription.AddValidationError(AErrorText: string);
+begin
+  FValidateErrors.Add(AErrorText);
+end;
+
+procedure TBlockDescription.AddValidationErrorFmt(AErrorTextFmt: string;
+  AArgs: array of const);
+begin
+  AddValidationError(Format(AErrorTextFmt, AArgs));
+end;
+
 constructor TBlockDescription.Create;
 begin
   FParams := TObjectDictionary<string, TParamDescription>.Create();
@@ -467,6 +486,7 @@ begin
   FActions := TObjectDictionary<string, TBlockAction>.Create();
   FActions.OnValueNotify := OnActionsValueChanged;
   FBlockRefs := TObjectDictionary<integer, TBlockRef>.Create();
+  FValidateErrors := TStringList.Create;
 end;
 
 destructor TBlockDescription.Destroy;
@@ -484,6 +504,8 @@ begin
   for O in FBlockRefs.Values do
     O.Free;
   FBlockRefs.Free;
+
+  FValidateErrors.Free;
 
   inherited;
 end;
@@ -665,6 +687,25 @@ begin
 end;
 
 procedure TBlockDescription.Validate;
+begin
+  FValidateErrors.Clear;
+  try
+    ValidateInternal;
+  except
+    on Err: Exception do
+      raise Exception.CreateFmt(
+        'Ошибка во время валидации блока %s: %s %s %s %s',
+        [Self.Name, CrLf, Err.Message, CrLf, FValidateErrors.Text]
+      );
+  end;
+  if FValidateErrors.Count > 0 then
+    raise Exception.CreateFmt(
+      'Ошибка валидации блока %s: %s %s',
+      [Self.Name, CrLf, FValidateErrors.Text]
+    );
+end;
+
+procedure TBlockDescription.ValidateInternal;
 var
   S: TStrings;
   LastGroup: string;
@@ -675,6 +716,8 @@ var
   DblClickActionFound: boolean;
   R: TBlockRef;
   SourceParam: string;
+  RefBlock: TBlockDescription;
+  RefFieldsCount: integer;
 begin
   S := TStringList.Create;
   try
@@ -683,7 +726,7 @@ begin
     begin
       if (P.FParamDirection in [pdIn, pdOut,  pdInOut]) then
         if (P.Group <> P.Group) and (S.IndexOf(P.Group) <> -1) then
-          raise Exception.CreateFmt('Группа %s встречается дважды не рядом в параметрах', [P.Group]);
+          AddValidationErrorFmt('Группа %s встречается дважды не рядом в параметрах', [P.Group]);
       LastGroup := P.Group;
     end;
 
@@ -693,7 +736,7 @@ begin
     begin
       if (P.FParamDirection in [pdField]) then
         if (P.Group <> P.Group) and (S.IndexOf(P.Group) <> -1) then
-          raise Exception.CreateFmt('Группа %s встречается дважды не рядом в параметрах', [P.Group]);
+          AddValidationErrorFmt('Группа %s встречается дважды не рядом в параметрах', [P.Group]);
       LastGroup := P.Group;
     end;
   finally
@@ -709,7 +752,7 @@ begin
       else
         Inc(NonEmptyCount);
   if (EmptyCount > 0) and (NonEmptyCount > 0) then
-    raise Exception.Create('Есть параметры без группы и с группой в inout');
+    AddValidationError('Есть параметры без группы и с группой в inout');
 
   EmptyCount := 0;
   NonEmptyCount := 0;
@@ -720,16 +763,16 @@ begin
       else
         Inc(NonEmptyCount);
   if (EmptyCount > 0) and (NonEmptyCount > 0) then
-    raise Exception.Create('Есть параметры без группы и с группой в fields');
+    AddValidationError('Есть параметры без группы и с группой в fields');
 
   for P in Params.Values do
     if P.EnablerParamName <> '' then
     begin
       EnablerParam := FindParam(P.EnablerParamName);
       if not Assigned(EnablerParam) then
-        raise Exception.CreateFmt('EnablerParam не найден: %s %s', [P.Name, P.EnablerParamName]);
+        AddValidationErrorFmt('EnablerParam не найден: %s %s', [P.Name, P.EnablerParamName]);
       if not (EnablerParam.ParamDirection in [pdIn, pdInOut]) then
-        raise Exception.CreateFmt('У EnablerParam неверный тип: %s %s', [P.Name, P.EnablerParamName]);
+        AddValidationErrorFmt('У EnablerParam неверный тип: %s %s', [P.Name, P.EnablerParamName]);
     end;
 
   DblClickActionFound := false;
@@ -738,24 +781,45 @@ begin
     for SourceParam in A.ParamBinds.Keys do
     begin
       if not Assigned(FindParam(SourceParam)) then
-        raise Exception.CreateFmt('Не найден SourceParam %s в ссылке %s', [SourceParam, A.Caption]);
+        AddValidationErrorFmt('Не найден SourceParam %s в ссылке %s', [SourceParam, A.Caption]);
     end;
     if A.ActionStyle = asGridDblClick then
       if not DblClickActionFound then
         DblClickActionFound := true
       else
-        raise Exception.Create('Найдено более одной ссылки типа asGridDblClick');
+        AddValidationError('Найдено более одной ссылки типа asGridDblClick');
   end;
 
   for R in BlockRefs.Values do
   begin
     if R.MainParam = '' then
-      raise Exception.CreateFmt('В ссылке %d нет главного параметра', [R.FID]);
+      AddValidationErrorFmt('В ссылке %d нет главного параметра', [R.FID]);
     if R.Params.IndexOf(R.MainParam) = -1 then
-      raise Exception.CreateFmt(
+      AddValidationErrorFmt(
         'В ссылке %d главный параметр не из списка параметров',
         [R.FID]
       );
+
+    RefBlock := BlocksManager.Blocks[R.RefsTo];
+    RefFieldsCount := 0;
+    for P in RefBlock.Params.Values do
+      if P.IndexInKeyFields <> 0 then
+        Inc(RefFieldsCount);
+    if RefFieldsCount <> R.Params.Count then
+      AddValidationErrorFmt(
+        'Количество полей в ссылке %d не совпадает с количеством полей в ключе',
+        [R.FID]
+      )
+    else
+      for P in RefBlock.Params.Values do
+        if P.IndexInKeyFields <> 0 then
+        begin
+          if P.DataType <> Params[R.Params[P.IndexInKeyFields - 1]].DataType then
+            AddValidationErrorFmt(
+              'Тип параметра в ссылке и ПК не совпадает: %s %s',
+              [R.Params[P.IndexInKeyFields - 1], P.Name]
+            );
+        end;
   end;
 
   // TODO: что еще хотел проверить?
@@ -774,7 +838,7 @@ begin
   FProcedureName := Value;
 end;
 
-procedure TProcedureDescription.Validate;
+procedure TProcedureDescription.ValidateInternal;
 var
   P: TParamDescription;
   FieldsFound: boolean;
@@ -783,7 +847,7 @@ var
 begin
   inherited;
   if ProcedureName = '' then
-    raise Exception.CreateFmt('Не указано имя процедуры в блоке %s', [DisplayLabel]);
+    AddValidationError('Не указано имя процедуры');
 
   FieldsFound := false;
   for P in Params.Values do
@@ -793,15 +857,15 @@ begin
       Break;
     end;
   if (KeyFieldNames = '') and FieldsFound then
-    raise Exception.CreateFmt('Нет ключевого поля, но есть поля в блоке %s', [DisplayLabel]);
+    AddValidationError('Нет ключевого поля, но есть поля');
   KeyFieldsList := TStringList.Create;
   try
     SplitDelimitedString(KeyFieldsList, KeyFieldNames, ';');
     for F in KeyFieldsList do
       if ParamByName(F).FParamDirection <> pdField then
-        raise Exception.CreateFmt(
-          'Ключевое поле %s не найдено или не является полем в блоке %s',
-          [F, DisplayLabel]
+        AddValidationErrorFmt(
+          'Ключевое поле %s не найдено или не является полем',
+          [F]
         );
   finally
     KeyFieldsList.Free;
@@ -814,7 +878,7 @@ begin
       (FindParam(ParentFieldNames).ParamDirection <> pdField)
     )
   then
-    raise Exception.CreateFmt('Включено дерево, но поле предка не найдено в блоке %s', [DisplayLabel]);
+    AddValidationError('Включено дерево, но поле предка не найдено');
 end;
 
 { TPanelDescription }
@@ -921,41 +985,47 @@ begin
   FRootPanel := Value;
 end;
 
-procedure TFormDescription.Validate;
+procedure TFormDescription.ValidateInternal;
 var
   P: TParamDescription;
   Block: TBlockDescription;
+  SourceBlock: TBlockDescription;
 begin
   inherited;
   for P in Params.Values do
-  begin
     if (P.SourceBlockId <> 0) and (P.SourceParamName = '') then
-      raise Exception.CreateFmt(
+      AddValidationErrorFmt(
         'Параметр %s - задан исходный блок, но не задан исходный параметр',
         [P.Name]
       );
-    if (P.SourceBlockId = 0) and (P.SourceParamName <> '') then
-      raise Exception.CreateFmt(
-        'Параметр %s - задан исходный параметр, но не задан исходный блок',
-        [P.Name]
-      );
-  end;
 
   for Block in Blocks.Values do
     for P in Block.Params.Values do
+    begin
+      if P.SourceParamName = '' then
+        Continue;
       if P.SourceBlockId <> 0 then
       begin
         if not Blocks.ContainsKey(P.SourceBlockId) then
-          raise Exception.CreateFmt(
+          AddValidationErrorFmt(
             'Исходный блок %d параметра %s не найден в форме',
             [P.SourceBlockId, P.Name]
           );
         if not Blocks[P.SourceBlockId].IsDataSet then
-          raise Exception.CreateFmt(
+          AddValidationErrorFmt(
             'Исходный блок параметра %s (%d) - не DataSet',
             [P.Name, P.SourceBlockId]
           );
-      end;
+        SourceBlock := Blocks[P.SourceBlockId];
+      end
+      else
+        SourceBlock := Self;
+      if not Assigned(SourceBlock.FindParam(P.SourceParamName)) then
+        AddValidationErrorFmt(
+          'Исходный блок параметра %s (%s) не найден',
+          [P.Name, P.SourceParamName]
+        );
+    end;
 end;
 
 { TBlockAction }

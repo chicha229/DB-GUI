@@ -61,6 +61,8 @@ type
   public
     { Public declarations }
     IsOpened: boolean;
+    IsOpening: boolean;
+
     EditorDrawPoint: TPoint;
     GroupDrawPoint: TPoint;
     LastParamGroup: string;
@@ -128,7 +130,7 @@ implementation
 {$R *.dfm}
 
 uses
-  Data.DB, UITypes,
+  Data.DB, UITypes, Vcl.Menus,
   cxSpinEdit, cxCheckBox, cxCalc, cxCurrencyEdit, cxCalendar, cxTimeEdit,
   cxBlobEdit, cxMemo, cxImage,
   cxDBLookupComboBox, uADCompClient,
@@ -252,6 +254,8 @@ var
   P, EditingParam: TParamDescription;
   E: TcxCustomEdit;
   ChangeId: integer;
+  Ref: TBlockRef;
+  i: integer;
 begin
   E := Sender as TcxCustomEdit;
   EditingParam := TObject((Sender as TcxCustomEdit).Tag) as TParamDescription;
@@ -264,7 +268,17 @@ begin
 
   ChangeId := BeginParamChanging;
   try
-    ParamValues.AddOrSetValue(EditingParam.Name, E.EditingValue);
+    Ref := GetBlockRef(EditingParam);
+    if Assigned(Ref) then
+    begin
+      if Ref.Params.Count = 1 then
+        ParamValues.AddOrSetValue(Ref.Params[0], E.EditingValue)
+      else
+        for I := 0 to Ref.Params.Count - 1 do
+          ParamValues.AddOrSetValue(Ref.Params[i], E.EditingValue[i]);
+    end
+    else
+      ParamValues.AddOrSetValue(EditingParam.Name, E.EditingValue);
   finally
     EndParamChanging(ChangeId);
   end;
@@ -396,6 +410,8 @@ var
   L: TLabel;
   E: TcxCustomEdit;
   CB: TcxCheckBox;
+  SP: TcxSpinEditProperties;
+  CP: TcxCalcEditProperties;
 begin
   // создаем контролы
   L := nil;
@@ -406,6 +422,20 @@ begin
 
   E.Tag := Integer(P);
   TcxCustomEditCrack(E).Properties.OnEditValueChanged := Self.OnEditValueChanged;
+
+  if E is TcxSpinEdit then
+  begin
+    SP := (TcxCustomEditCrack(E).Properties as TcxSpinEditProperties);
+    SP.ClearKey := ShortCut(VK_DELETE, [ssCtrl]);
+    SP.UseNullString := true;
+  end;
+  if E is TcxCalcEdit then
+  begin
+    CP := (TcxCustomEditCrack(E).Properties as TcxCalcEditProperties);
+    CP.ClearKey := ShortCut(VK_DELETE, [ssCtrl]);
+    CP.UseNullString := true;
+  end;
+
   if P.ReadOnly then
   begin
     TcxCustomEditCrack(E).Properties.ReadOnly := true;
@@ -491,6 +521,8 @@ begin
   L.Properties.KeyFieldNames := RefBlock.KeyFieldNames;
   L.Properties.ListFieldNames := RefBlock.NameFieldNames;
   L.Properties.ListSource := CustomMainDM.GetRefDataSource(R.RefsTo);
+
+  L.Properties.DropDownSizeable := true;
 end;
 
 procedure TBlockFrame.CreatePC;
@@ -644,7 +676,7 @@ var
   ChangedParamValues: TParamValues;
 begin
   try
-    if not IsOpened then
+    if IsOpening then
       Exit;
 
     // удаляем не изменившиеся значения
@@ -767,13 +799,17 @@ var
   R: TBlockRef;
   RC: TParamControls;
   Q: TADQuery;
+  RB: TBlockRefBind;
 begin
-  // TODO: входные параметры RefQuery?
   for R in BlockDescription.BlockRefs.Values do
     if RefControls.ContainsKey(R.ID) then
     begin
       RC := RefControls[R.ID];
       Q := (RC.FEditorControl as TcxLookupComboBox).Properties.ListSource.DataSet as TADQuery;
+      if BlockDescription.ChildId = 0 then
+        for RB in R.Binds.Values do
+          if RB.SourceBlockId = 0 then
+            Q.ParamByName(RB.DestinationParam).Value := ParamValues[RB.SourceParam];
       Q.Open;
       CustomMainDM.FillQueryFields(Q, BlocksManager.Blocks[R.RefsTo]);
     end;

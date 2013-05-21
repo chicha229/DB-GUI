@@ -33,7 +33,6 @@ type
     function Open: boolean; override;
     function Save: boolean; override;
 
-    procedure EditorsToParamValues; override;
     procedure OnChangeParamValues(Sender: TBlockFrame; AChangeId: Int64); override;
 
     procedure Build(AParent: TWinControl); override;
@@ -159,8 +158,8 @@ begin
         C := F;
       end;
 
-      C.Width := C.Constraints.MinWidth;
-      C.Height := C.Constraints.MinHeight;
+      C.Width := C.Constraints.MinWidth + 8;
+      C.Height := C.Constraints.MinHeight + 8;
 
       if (Assigned(Block) and Block.Visible) or Assigned(PD) then
       begin
@@ -211,37 +210,32 @@ end;
 
 procedure TFormFrame.BindFrameParamsFromSource(Frame: TBlockFrame; var AllParamsBinded: Boolean);
 var
-  Param, FormParam: TParamDescription;
+  Param: TParamDescription;
   ParamFound: boolean;
+  SourceFrame: TBlockFrame;
 begin
   AllParamsBinded := true;
   for Param in Frame.BlockDescription.Params.Values do
   begin
     ParamFound := false;
-    if (Param.SourceBlockId = 0) or (FFrames[Param.SourceBlockId].IsOpened) then
+    if Param.SourceParamName = '' then
+      ParamFound := true
+    else
     begin
-      if
-        (Param.SourceBlockId <> 0) and
-        (FFrames[Param.SourceBlockId].ParamValues.ContainsKey(Param.SourceParamName))
-      then
+      if Param.SourceBlockId = 0 then
+        SourceFrame := Self
+      else
+        SourceFrame := FFrames[Param.SourceBlockId];
+      if SourceFrame.IsOpened then
+      begin
         Frame.ParamValues.AddOrSetValue(
           Param.Name,
-          FFrames[Param.SourceBlockId].ParamValues[Param.SourceParamName]
+          SourceFrame.ParamValues[Param.SourceParamName]
         );
-      ParamFound := true;
-    end;
-    // все in и inout параметры формы, у которых SourceBlock = переданному
-    for FormParam in FormDescription.Params.Values do
-      if
-        (FormParam.SourceBlockId = Frame.BlockDescription.ChildID) and
-        (FormParam.ParamDirection in [pdIn, pdInOut]) and
-        (FormParam.SourceParamName = Param.Name)
-      then
-      begin
-        if ParamValues.ContainsKey(FormParam.Name) then
-          Frame.ParamValues.AddOrSetValue(Param.Name, ParamValues[FormParam.Name]);
         ParamFound := true;
       end;
+    end;
+
     if not ParamFound then
       AllParamsBinded := false;
   end;
@@ -288,7 +282,7 @@ begin
             then
             begin
               RefQuery := (CustomMainDM.GetRefDataSource(Ref.RefsTo).DataSet as TADQuery);
-              RefQuery.ParamByName(ParamName).Value := Sender.ParamValues[ParamName];
+              RefQuery.ParamByName(RefBind.DestinationParam).Value := Sender.ParamValues[ParamName];
             end;
           if Assigned(RefQuery) then
           begin
@@ -336,7 +330,6 @@ var
   ChangedParamValues: TParamValues;
   ParamName: string;
   FormChangeId: Int64;
-  SelfParam: TParamDescription;
 begin
   ChangedParamValues := Sender.ChangedParams[AChangeId];
 
@@ -344,14 +337,11 @@ begin
   try
     for ChangedParamName in ChangedParamValues.Keys do
       for ParamName in FormDescription.Params.Keys do
-      begin
-        SelfParam := FormDescription.Params[ParamName];
         if
-         (SelfParam.SourceParamName = ChangedParamName) and
-         (SelfParam.SourceBlockId = Sender.BlockDescription.ChildId)
+          (Sender.BlockDescription.Params[ChangedParamName].SourceBlockId = 0) and
+          (Sender.BlockDescription.Params[ChangedParamName].SourceParamName = ParamName)
         then
-          ParamValues.AddOrSetValue(SelfParam.Name, Sender.ParamValues[ChangedParamName]);
-      end;
+          ParamValues.AddOrSetValue(ParamName, Sender.ParamValues[ChangedParamName]);
   finally
     EndParamChanging(FormChangeId);
   end;
@@ -379,7 +369,10 @@ function TFormFrame.Open: boolean;
     AllParamsBinded: boolean;
   begin
     for Frame in FFrames.Values do
+    begin
       Frame.IsOpened := false;
+      Frame.IsOpening := true;
+    end;
 
     LoopCounter := 0;
     repeat
@@ -406,58 +399,57 @@ function TFormFrame.Open: boolean;
     until (OpenedCount = 0) or (LoopCounter > FFrames.Count + 1);
     if LoopCounter > FFrames.Count + 1 then
       raise Exception.Create('Цикл зависимостей при открытии формы');
+
+    for Frame in FFrames.Values do
+      Frame.IsOpening := false;
   end;
 
-  procedure SetReqQueriesParamValues;
+  procedure SetRefQueriesParamValues;
   var
-    PV: TParamValues;
-    ParamName: string;
-    RefId: integer;
-    FrameChangeId: integer;
-    RefBind: TBlockRefBind;
+    F: TBlockFrame;
+    R: TBlockRef;
+    B: TBlockRefBind;
     RefQuery: TADQuery;
-    RefFrame: TBlockFrame;
-    Ref: TBlockRef;
+    ParamValuesChanged: boolean;
+    SourceFrame: TBlockFrame;
   begin
-    PV := ParamValues;
-    for ParamName in PV.Keys do
-      // измененное значение. какой из рефов зависит от этого
-      for RefFrame in FFrames.Values do
+    for F in FFrames.Values do
+      for R in F.BlockDescription.BlockRefs.Values do
       begin
-        FrameChangeId := RefFrame.BeginParamChanging;
-        try
-          for RefId in RefFrame.BlockDescription.BlockRefs.Keys do
+        RefQuery := (CustomMainDM.GetRefDataSource(R.RefsTo).DataSet as TADQuery);
+        if not Assigned(RefQuery) then
+          Continue;
+        ParamValuesChanged := false;
+        for B in R.Binds.Values do
+        begin
+          if B.SourceBlockId = 0 then
+            SourceFrame := Self
+          else
+            SourceFrame := FFrames[B.SourceBlockId];
+          if RefQuery.ParamByName(B.DestinationParam).Value <>
+            SourceFrame.ParamValues[B.SourceParam] then
           begin
-            RefQuery := nil;
-            Ref := RefFrame.BlockDescription.BlockRefs[RefId];
-            for RefBind in Ref.Binds.Values do
-              if
-                (RefBind.SourceBlockId = 0) and
-                (RefBind.SourceParam = ParamName)
-              then
-              begin
-                RefQuery := (CustomMainDM.GetRefDataSource(Ref.RefsTo).DataSet as TADQuery);
-                RefQuery.ParamByName(ParamName).Value := PV[ParamName];
-              end;
-            if Assigned(RefQuery) then
-            begin
-              RefQuery.Close;
-              RefQuery.Open;
-            end;
+            RefQuery.ParamByName(B.DestinationParam).Value :=
+              SourceFrame.ParamValues[B.SourceParam];
+            ParamValuesChanged := true;
           end;
-        finally
-          RefFrame.EndParamChanging(FrameChangeId);
+        end;
+        if ParamValuesChanged then
+        begin
+          RefQuery.Close;
+          RefQuery.Open;
         end;
       end;
   end;
 
 begin
-  Self.IsOpened := false;
+  Self.IsOpened := true;
+  Self.IsOpening := true;
 
   OpenChildFrames;
-  SetReqQueriesParamValues;
+  SetRefQueriesParamValues;
 
-  Self.IsOpened := true;
+  Self.IsOpening := false;
   Result := true;
 end;
 
@@ -503,23 +495,6 @@ begin
   FFrames.Free;
   FParentControls.Free;
   inherited;
-end;
-
-procedure TFormFrame.EditorsToParamValues;
-var
-  Param: TParamDescription;
-begin
-  inherited;
-  for Param in FormDescription.Params.Values do
-    if
-      (Param.ParamDirection in [pdOut, pdInOut, pdField]) and
-      (Param.SourceBlockId <> 0) and
-      (FFrames[Param.SourceBlockId].ParamValues.ContainsKey(Param.SourceParamName))
-    then
-      ParamValues.AddOrSetValue(
-        Param.Name,
-        FFrames[Param.SourceBlockId].ParamValues[Param.SourceParamName]
-      );
 end;
 
 { TIndexOnParentComparer<T> }

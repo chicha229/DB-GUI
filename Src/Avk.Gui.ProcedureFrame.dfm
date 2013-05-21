@@ -214,7 +214,7 @@ inherited ProcedureFrame: TProcedureFrame
     end
   end
   object Query: TADQuery
-    AfterOpen = QueryAfterPost
+    AfterOpen = QueryAfterOpen
     AfterPost = QueryAfterPost
     AfterScroll = QueryAfterPost
     Left = 8
