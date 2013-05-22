@@ -116,7 +116,10 @@ end;
 
 procedure TCustomMainDataModule.OnRefreshProcedure(AProcedureName: string);
 begin
-  if FCommonRefs.ContainsKey(AProcedureName) then
+  if
+    FCommonRefs.ContainsKey(AProcedureName) and
+    FCommonRefs[AProcedureName].DataSet.Active
+  then
     FCommonRefs[AProcedureName].DataSet.Refresh;
 end;
 
