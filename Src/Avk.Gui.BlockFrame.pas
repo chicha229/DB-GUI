@@ -103,6 +103,8 @@ type
     function Open: boolean; virtual;
     function Save: boolean; virtual;
 
+    function Modified: boolean; virtual;
+
     function CreateParamEditor(
       P: TParamDescription;
       AEditorClass: TcxCustomEditClass = nil
@@ -247,6 +249,11 @@ begin
   TopLabel.Visible := false;
   BarManagerMenuBar.Visible := false;
   BarManagerToolBar.Visible := false;
+end;
+
+function TBlockFrame.Modified: boolean;
+begin
+  Result := false;
 end;
 
 procedure TBlockFrame.OnEditValueChanged(Sender: TObject);
@@ -644,8 +651,11 @@ end;
 procedure TBlockFrame.PostEditorsValues;
 begin
   EditorsToParamValues;
-  ValidateInput;
-  FormErrors.ShowErrors;
+  if not IsOpening then
+  begin
+    ValidateInput;
+    FormErrors.ShowErrors;
+  end;
 end;
 
 procedure TBlockFrame.OnActionClick(Sender: TObject);

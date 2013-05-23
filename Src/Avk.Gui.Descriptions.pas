@@ -782,6 +782,23 @@ begin
     begin
       if not Assigned(FindParam(SourceParam)) then
         AddValidationErrorFmt('Не найден SourceParam %s в ссылке %s', [SourceParam, A.Caption]);
+      if
+        Assigned(A.LinksTo) and
+        (not A.LinksTo.Params.ContainsKey(A.ParamBinds[SourceParam]))
+      then
+        AddValidationErrorFmt(
+          'Не найден DestinationParam %s в ссылке %s',
+          [A.ParamBinds[SourceParam], A.Caption]
+        );
+      if
+        Assigned(A.LinksTo) and
+        (A.LinksTo.Params.ContainsKey(A.ParamBinds[SourceParam])) and
+        (not (A.LinksTo.Params[A.ParamBinds[SourceParam]].ParamDirection in [pdIn, pdInOut]))
+      then
+        AddValidationErrorFmt(
+          'DestinationParam %s в ссылке %s не in или inout',
+          [A.ParamBinds[SourceParam], A.Caption]
+        );
     end;
     if A.ActionStyle = asGridDblClick then
       if not DblClickActionFound then
@@ -990,6 +1007,8 @@ var
   P: TParamDescription;
   Block: TBlockDescription;
   SourceBlock: TBlockDescription;
+  R: TBlockRef;
+  B: TBlockRefBind;
 begin
   inherited;
   for P in Params.Values do
@@ -1000,32 +1019,77 @@ begin
       );
 
   for Block in Blocks.Values do
+  begin
     for P in Block.Params.Values do
     begin
       if P.SourceParamName = '' then
         Continue;
+      if not (P.ParamDirection in [pdIn, pdOut]) then
+        AddValidationErrorFmt(
+          'Параметр %s - имеет источник, но сам не in или inout',
+          [P.Name]
+        );
       if P.SourceBlockId <> 0 then
       begin
         if not Blocks.ContainsKey(P.SourceBlockId) then
+        begin
           AddValidationErrorFmt(
             'Исходный блок %d параметра %s не найден в форме',
             [P.SourceBlockId, P.Name]
           );
-        if not Blocks[P.SourceBlockId].IsDataSet then
-          AddValidationErrorFmt(
-            'Исходный блок параметра %s (%d) - не DataSet',
-            [P.Name, P.SourceBlockId]
-          );
-        SourceBlock := Blocks[P.SourceBlockId];
+          SourceBlock := nil;
+        end
+        else
+        begin
+          if not Blocks[P.SourceBlockId].IsDataSet then
+            AddValidationErrorFmt(
+              'Исходный блок параметра %s (%d) - не DataSet',
+              [P.Name, P.SourceBlockId]
+            );
+          SourceBlock := Blocks[P.SourceBlockId];
+        end;
       end
       else
         SourceBlock := Self;
-      if not Assigned(SourceBlock.FindParam(P.SourceParamName)) then
+      if
+        Assigned(SourceBlock) and
+        (not Assigned(SourceBlock.FindParam(P.SourceParamName)))
+      then
         AddValidationErrorFmt(
           'Исходный блок параметра %s (%s) не найден',
           [P.Name, P.SourceParamName]
         );
     end;
+
+    for R in Block.BlockRefs.Values do
+      for B in R.Binds.Values do
+        if B.SourceParam <> '' then
+        begin
+          if B.SourceBlockId = 0 then
+            SourceBlock := Self
+          else
+          begin
+            if not Blocks.ContainsKey(B.SourceBlockId) then
+            begin
+              AddValidationErrorFmt(
+                'Исходный блок %d ссылки %d параметра %s не найден в форме',
+                [B.SourceBlockId, R.ID, B.SourceParam]
+              );
+            SourceBlock := nil;
+            end
+            else
+              SourceBlock := Blocks[B.SourceBlockId];
+          end;
+          if
+            Assigned(SourceBlock) and
+            (not Assigned(SourceBlock.FindParam(B.SourceParam)))
+          then
+            AddValidationErrorFmt(
+              'Исходный параметр %s ссылки %d не найден',
+              [B.SourceParam, RID]
+            );
+        end;
+  end;
 end;
 
 { TBlockAction }

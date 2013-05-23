@@ -52,7 +52,12 @@ type
     procedure SearchEditPropertiesChange(Sender: TObject);
     procedure QueryAfterOpen(DataSet: TDataSet);
   private
+    { Private declarations }
+    FRecordsModified: boolean;
+    FParamsModified: boolean;
+
     FConnection: TADConnection;
+
     function GetProcedureDescription: TProcedureDescription;
     procedure SetConnection(const Value: TADConnection);
     procedure ApplyParamsToQuery;
@@ -68,7 +73,6 @@ type
     procedure ApplySummaryRow;
     procedure SaveSearchFields;
     procedure ApplySearchVisible;
-    { Private declarations }
   public
     SearchFields: string;
 
@@ -81,6 +85,7 @@ type
     procedure Build(AParent: TWinControl); override;
     function Open: boolean; override;
     function Save: boolean; override;
+    function Modified: boolean; override;
 
     procedure SetButtonProperties(AButton: TdxBarItem); override;
     function CallDblClickActionInternal: boolean; override;
@@ -325,6 +330,18 @@ begin
   ApplyGridViewSettings;
 end;
 
+function TProcedureFrame.Modified: boolean;
+begin
+  if BlockDescription.IsDataSet then
+    Result := FRecordsModified
+  else
+  begin
+    EditorsToParamValues;
+    Result := FParamsModified;
+  end;
+
+end;
+
 procedure TProcedureFrame.ApplySummaryRow;
 var
   VT: TcxGridDBTableView;
@@ -368,7 +385,11 @@ begin
     rmInsert,
     rmUpdate,
     rmDelete,
-    rmFull: RefreshData;
+    rmFull:
+      begin
+        RefreshData;
+        FRecordsModified := true;
+      end;
     rmNone: ;
   end;
 end;
@@ -380,7 +401,14 @@ var
   NeedRefresh: boolean;
 begin
   inherited;
-  if (Sender <> Self) or (not ProcedureDescription.IsDataSet) then
+  if (Sender = Self) and (not ProcedureDescription.IsDataSet) then
+    FParamsModified := true;
+
+  if
+    (Sender <> Self) or
+    (not ProcedureDescription.IsDataSet) or
+    (BlockDescription.ChildId = 0)
+  then
     Exit;
 
   NeedRefresh := false;

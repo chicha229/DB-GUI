@@ -7,13 +7,13 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Avk.GUI.CustomEditorForm, cxGraphics,
   cxLookAndFeels, cxLookAndFeelPainters, Vcl.Menus, cxControls, cxContainer,
   cxEdit, uFormErrors, cxGroupBox, Vcl.StdCtrls, cxButtons, Vcl.ExtCtrls,
-  Avk.Gui.FormFrame, dxSkinsCore;
+  Avk.Gui.BlockFrame, dxSkinsCore, dxSkinsDefaultPainters;
 
 type
   TFrameModalForm = class (TCustomEditorForm)
   private
-    FFrame: TFormFrame;
-    procedure SetFrame(const Value: TFormFrame);
+    FFrame: TBlockFrame;
+    procedure SetFrame(const Value: TBlockFrame);
     { Private declarations }
   public
     { Public declarations }
@@ -25,7 +25,7 @@ type
     function  Modified: boolean; override;
     procedure ValidateInput; override;
 
-    property Frame: TFormFrame read FFrame write SetFrame;
+    property Frame: TBlockFrame read FFrame write SetFrame;
   end;
 
 implementation
@@ -50,14 +50,14 @@ begin
   if not Assigned(FFrame) then
     Result := inherited FormSectionName
   else
-    Result := FFrame.FormDescription.Name + 'ModalForm';
+    Result := FFrame.BlockDescription.Name + 'ModalForm';
 end;
 
 function TFrameModalForm.Modified: boolean;
 begin
   // TODO: развернуть, вычислить!
   FFrame.EditorsToParamValues;
-  Result := true;
+  Result := FFrame.Modified;
 end;
 
 procedure TFrameModalForm.SaveChanges;
@@ -66,10 +66,10 @@ begin
   FFrame.Save;
 end;
 
-procedure TFrameModalForm.SetFrame(const Value: TFormFrame);
+procedure TFrameModalForm.SetFrame(const Value: TBlockFrame);
 begin
   FFrame := Value;
-  Caption := FFrame.FormDescription.DisplayLabel;
+  Caption := FFrame.BlockDescription.DisplayLabel;
   LoadFormSettings;
 end;
 

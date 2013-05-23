@@ -32,6 +32,7 @@ type
 
     function Open: boolean; override;
     function Save: boolean; override;
+    function Modified: boolean; override;
 
     procedure OnChangeParamValues(Sender: TBlockFrame; AChangeId: Int64); override;
 
@@ -248,6 +249,19 @@ begin
   Result := BlockDescription as TFormDescription;
 end;
 
+
+function TFormFrame.Modified: boolean;
+var
+  F: TBlockFrame;
+begin
+  for F in FFrames.Values do
+    if F.Modified then
+    begin
+      Result := true;
+      Exit;
+    end;
+  Result := false;
+end;
 
 procedure TFormFrame.OnChangeParamValues(
   Sender: TBlockFrame; AChangeId: Int64
