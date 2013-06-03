@@ -121,12 +121,12 @@ type
     property MainParam: string read FMainParam write SetMainParam;
   end;
 
-  TFormDescription = class;
+  TBlockDescription = class;
 
   TBlockAction = class (TObject)
   private
     FLinksToName: string;
-    FLinksTo: TFormDescription;
+    FLinksTo: TBlockDescription;
     FActionStyle: TBlockActionStyle;
     FParamBinds: TDictionary<string, string>;
     FCaption: string;
@@ -138,7 +138,7 @@ type
     procedure SetActionStyle(const Value: TBlockActionStyle);
     procedure SetCaption(const Value: string);
     procedure SetRefreshMode(const Value: TRefreshMode);
-    function GetLinksTo: TFormDescription;
+    function GetLinksTo: TBlockDescription;
     procedure SetImageIndex(const Value: integer);
     procedure SetName(const Value: string);
     procedure SetOrderNum(const Value: integer);
@@ -154,7 +154,7 @@ type
     property RefreshMode: TRefreshMode read FRefreshMode write SetRefreshMode;
 
     property LinksToName: string read FLinksToName write SetLinksToName;
-    property LinksTo: TFormDescription read GetLinksTo;
+    property LinksTo: TBlockDescription read GetLinksTo;
     property ParamBinds: TDictionary<string, string> read FParamBinds;
     property ImageIndex: integer read FImageIndex write SetImageIndex;
   end;
@@ -487,6 +487,8 @@ begin
   FActions.OnValueNotify := OnActionsValueChanged;
   FBlockRefs := TObjectDictionary<integer, TBlockRef>.Create();
   FValidateErrors := TStringList.Create;
+
+  FParamsDrawDirection := ddVertical;
 end;
 
 destructor TBlockDescription.Destroy;
@@ -1105,10 +1107,10 @@ begin
   inherited;
 end;
 
-function TBlockAction.GetLinksTo: TFormDescription;
+function TBlockAction.GetLinksTo: TBlockDescription;
 begin
   if not Assigned(FLinksTo) then
-    FLinksTo := BlocksManager.Blocks[FLinksToName] as TFormDescription;
+    FLinksTo := BlocksManager.Blocks[FLinksToName];
   Result := FLinksTo;
 end;
 

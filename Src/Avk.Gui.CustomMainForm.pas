@@ -122,7 +122,7 @@ begin
   Frame.Open;
   if Assigned(Form) then
   begin
-    Form.Frame := Frame as TFormFrame;
+    Form.Frame := Frame;
     Result := Form.ShowModal = mrOk;
     Form.Frame.PostEditorsValues;
     if Assigned(AParamValues) then
