@@ -1086,7 +1086,7 @@ begin
           then
             AddValidationErrorFmt(
               'Исходный параметр %s ссылки %d не найден',
-              [B.SourceParam, RID]
+              [B.SourceParam, R.ID]
             );
         end;
   end;
