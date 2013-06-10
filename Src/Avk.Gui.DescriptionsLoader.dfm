@@ -4,63 +4,123 @@ object DescriptionsLoaderDM: TDescriptionsLoaderDM
   OnDestroy = DataModuleDestroy
   Height = 424
   Width = 586
-  object BlocksQuery: TADQuery
-    ConnectionName = 'MainConnection'
+  object BlocksQuery: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
     Left = 40
     Top = 8
   end
-  object ProceduresQuery: TADQuery
-    ConnectionName = 'MainConnection'
+  object ProceduresQuery: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
     Left = 40
     Top = 56
   end
-  object FormsQuery: TADQuery
-    ConnectionName = 'MainConnection'
+  object FormsQuery: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
     Left = 40
     Top = 104
   end
-  object BlockParamsQuery: TADQuery
-    ConnectionName = 'MainConnection'
+  object BlockParamsQuery: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
     Left = 104
     Top = 24
   end
-  object BlockActionsQuery: TADQuery
-    ConnectionName = 'MainConnection'
+  object BlockActionsQuery: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
     Left = 104
     Top = 72
   end
-  object ActionBindsQuery: TADQuery
-    ConnectionName = 'MainConnection'
+  object ActionBindsQuery: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
     Left = 104
     Top = 120
   end
-  object FormChildsQuery: TADQuery
-    ConnectionName = 'MainConnection'
+  object FormChildsQuery: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
     Left = 40
     Top = 152
   end
-  object FormChildParamsQuery: TADQuery
-    ConnectionName = 'MainConnection'
+  object FormChildParamsQuery: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
     Left = 104
     Top = 168
   end
-  object FormPanelsQuery: TADQuery
-    ConnectionName = 'MainConnection'
+  object FormPanelsQuery: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
     Left = 40
     Top = 208
   end
-  object BlockRefParamsQuery: TADQuery
-    ConnectionName = 'MainConnection'
+  object BlockRefParamsQuery: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
     Left = 104
     Top = 216
   end
-  object BlockRefBindsQuery: TADQuery
-    ConnectionName = 'MainConnection'
+  object BlockRefBindsQuery: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
     Left = 40
     Top = 256
   end
-  object ChildRefBindsQuery: TADQuery
-    ConnectionName = 'MainConnection'
+  object ChildRefBindsQuery: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
     Left = 40
     Top = 304
   end

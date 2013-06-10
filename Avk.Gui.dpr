@@ -9,7 +9,6 @@ uses
   Avk.Gui.CustomMainDM in 'Src\Avk.Gui.CustomMainDM.pas' {CustomMainDataModule: TDataModule},
   uGuiTestMainDM in 'Src\uGuiTestMainDM.pas' {TestsMainDataModule: TDataModule},
   Avk.Gui.ProcedureFrame in 'Src\Avk.Gui.ProcedureFrame.pas' {ProcedureFrame: TFrame},
-  Avk.Gui.DbDependend in 'Src\Avk.Gui.DbDependend.pas',
   Avk.Gui.FormFrame in 'Src\Avk.Gui.FormFrame.pas' {FormFrame: TFrame},
   Avk.Gui.CustomMainForm in 'Src\Avk.Gui.CustomMainForm.pas' {CustomMainForm},
   Avk.Gui.BaseForm in 'Src\Avk.Gui.BaseForm.pas' {BaseForm},

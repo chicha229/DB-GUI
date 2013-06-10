@@ -19,13 +19,12 @@ uses
   Avk.Gui.Descriptions, cxGridBandedTableView, cxGridDBBandedTableView,
   dxBar, cxTL, cxTLdxBarBuiltInMenu, cxInplaceContainer, cxTLData, cxDBTL,
   cxMaskEdit, cxCheckBox, cxButtonEdit, dxSkinsDefaultPainters,
-  dxSkinsdxBarPainter, dxSkinscxPCPainter;
+  dxSkinsdxBarPainter, dxSkinscxPCPainter, Avk.Gui.Connection;
 
 type
   TProcedureFrame = class (TBlockFrame)
     GridLevel: TcxGridLevel;
     Grid: TcxGrid;
-    Query: TADQuery;
     DataSource: TDataSource;
     GridTableView: TcxGridDBBandedTableView;
     TreeList: TcxDBTreeList;
@@ -39,6 +38,7 @@ type
     SearchPanel: TPanel;
     SearchEdit: TcxButtonEdit;
     cxLabel1: TcxLabel;
+    MemTable: TADMemTable;
     procedure FullExpandBarButtonClick(Sender: TObject);
     procedure FullCollapseBarButtonClick(Sender: TObject);
     procedure RefreshDataBarButtonClick(Sender: TObject);
@@ -56,11 +56,7 @@ type
     FRecordsModified: boolean;
     FParamsModified: boolean;
 
-    FConnection: TADConnection;
-
     function GetProcedureDescription: TProcedureDescription;
-    procedure SetConnection(const Value: TADConnection);
-    procedure ApplyParamsToQuery;
     procedure ApplyDataSetView;
     function OpenQuery: boolean;
     procedure RefreshData;
@@ -81,7 +77,6 @@ type
     procedure OnChangeParamValues(Sender: TBlockFrame; AChangeId: Int64); override;
 
     procedure FillFields;
-    procedure FillQuery;
     procedure Build(AParent: TWinControl); override;
     function Open: boolean; override;
     function Save: boolean; override;
@@ -97,7 +92,6 @@ type
     procedure LoadFrameSettings; override;
 
     property ProcedureDescription: TProcedureDescription read GetProcedureDescription;
-    property Connection: TADConnection read FConnection write SetConnection;
 
     property KeyFieldValues: variant read GetKeyFieldValues write SetKeyFieldValues;
     property GridMode: boolean read GetGridMode write SetGridMode;
@@ -121,13 +115,6 @@ const
 
 { TProcedureFrame }
 
-procedure TProcedureFrame.FillQuery;
-begin
-  CustomMainDM.DBDependend.FillQuery(ProcedureDescription, Query);
-  if not Assigned(Query.Connection) then
-    Query.Connection := CustomMainDM.MainConnection;
-end;
-
 procedure TProcedureFrame.FullCollapseBarButtonClick(Sender: TObject);
 begin
   inherited;
@@ -147,16 +134,16 @@ var
   P: TParamDescription;
 begin
   inherited;
-  if Query.Active then
+  if MemTable.Active then
     for P in BlockDescription.Params.Values do
     begin
-      if Query.Active then
+      if MemTable.Active then
       begin
         if P.ParamDirection = pdField then
-          ParamValues.AddOrSetValue(P.Name, Query.FieldValues[P.Name])
+          ParamValues.AddOrSetValue(P.Name, MemTable.FieldValues[P.Name])
       end
       else if P.ParamDirection in [pdOut, pdInOut] then
-        ParamValues.AddOrSetValue(P.Name, Query.ParamByName(P.Name).Value);
+        ParamValues.AddOrSetValue(P.Name, MemTable.ParamByName(P.Name).Value);
     end;
 end;
 
@@ -171,8 +158,6 @@ var
   LastBand: TcxGridBand;
   LastTLBand: TcxTreeListBand;
 begin
-  CustomMainDM.FillQueryFields(Query, ProcedureDescription);
-
   GroupsFound := false;
   for P in ProcedureDescription.Params.Values do
     if P.Group <> '' then
@@ -254,7 +239,7 @@ begin
   if not ProcedureDescription.IsDataSet then
     Result := Unassigned
   else
-    Result := Query[ProcedureDescription.KeyFieldNames];
+    Result := MemTable[ProcedureDescription.KeyFieldNames];
 end;
 
 function TProcedureFrame.GetProcedureDescription: TProcedureDescription;
@@ -422,8 +407,6 @@ end;
 function TProcedureFrame.Open: boolean;
 begin
   IsOpening := true;
-  if not Assigned(Connection) then
-    Connection := CustomMainDM.MainConnection;
   Result := OpenQuery;
   if Result then
   begin
@@ -438,7 +421,7 @@ var
   CurrentRecordKey: variant;
 begin
   CurrentRecordKey := KeyFieldValues;
-  Query.Close;
+  MemTable.Close;
   OpenQuery;
   KeyFieldValues := CurrentRecordKey;
   CustomMainDM.OnRefreshProcedure(ProcedureDescription.Name);
@@ -451,31 +434,15 @@ begin
   RefreshData;
 end;
 
-procedure TProcedureFrame.ApplyParamsToQuery;
-var
-  ParamName: string;
-  P: TParamDescription;
-begin
-  for ParamName in ParamValues.Keys do
-  begin
-    P := ProcedureDescription.ParamByName(ParamName);
-    if P.ParamDirection in [pdIn, pdInOut] then
-      Query.ParamByName(ParamName).Value := ParamValues[ParamName];
-    if P.ParamDirection = pdInOut then
-      Query.ParamByName(ParamName).ParamType := ptInputOutput
-    else if P.ParamDirection = pdOut then
-      Query.ParamByName(ParamName).ParamType := ptOutput;
-  end;
-end;
-
 function TProcedureFrame.Save: boolean;
 begin
   Result := not ProcedureDescription.IsDataSet;
   if Result then
   begin
     PostEditorsValues;
-    ApplyParamsToQuery;
-    Query.ExecSQL;
+    Transaction.ExecuteProcedure(ProcedureDescription, ParamValues);
+    if IsTransactionStart then
+      Transaction.Commit;
   end;
 end;
 
@@ -490,12 +457,14 @@ end;
 function TProcedureFrame.OpenQuery: Boolean;
 begin
   PostEditorsValues;
-  ApplyParamsToQuery;
   Result := ProcedureDescription.IsDataSet;
   if Result then
   begin
-    Query.Close;
-    Query.Open;
+    Transaction.QueryData(
+      ProcedureDescription,
+      ParamValues,
+      MemTable
+    );
     if ProcedureDescription.IsTree then
       TreeList.FullExpand;
   end;
@@ -511,7 +480,7 @@ var
 begin
   ChangeId := BeginParamChanging;
   try
-    for F in Query.Fields do
+    for F in MemTable.Fields do
       if Assigned(ProcedureDescription.FindParam(F.FieldName)) then
         ParamValues.AddOrSetValue(F.FieldName, F.Value);
   finally
@@ -522,7 +491,6 @@ end;
 procedure TProcedureFrame.QueryAfterOpen(DataSet: TDataSet);
 begin
   inherited;
-  CustomMainDM.LogQueryOpen(DataSet as TADQuery, 'procedure open');
   PostFieldsToParamValues;
 end;
 
@@ -619,14 +587,14 @@ begin
   try
     S.Delimiter := ';';
     SplitDelimitedString(S, SearchFields, ';');
-    for i := 0 to Query.FieldCount - 1 do
-      if Query.Fields[i].Visible then
+    for i := 0 to MemTable.FieldCount - 1 do
+      if MemTable.Fields[i].Visible then
       begin
-        FieldName := AnsiUpperCase(Query.Fields[i].FieldName);
+        FieldName := AnsiUpperCase(MemTable.Fields[i].FieldName);
         FD := TFieldDescription.Create;
         FD.FieldName := FieldName;
-        FD.DisplayLabel := Query.Fields[i].DisplayLabel;
-        FD.SearchEnabled := S.IndexOf(Query.Fields[i].FieldName) <> -1;
+        FD.DisplayLabel := MemTable.Fields[i].DisplayLabel;
+        FD.SearchEnabled := S.IndexOf(MemTable.Fields[i].FieldName) <> -1;
         F.Add(FieldName, FD);
       end;
     if TSelectSearchFieldsForm.Execute(F) then
@@ -691,14 +659,8 @@ begin
   begin
     BA := TObject(AButton.Tag) as TBlockAction;
     if BA.RefreshMode in [rmUpdate, rmDelete] then
-      AButton.Enabled := not Query.IsEmpty;
+      AButton.Enabled := not MemTable.IsEmpty;
   end;
-end;
-
-procedure TProcedureFrame.SetConnection(const Value: TADConnection);
-begin
-  FConnection := Value;
-  Query.Connection := Connection;
 end;
 
 procedure TProcedureFrame.SetGridMode(const Value: boolean);
@@ -710,13 +672,13 @@ end;
 procedure TProcedureFrame.SetKeyFieldValues(const Value: variant);
 begin
   if ProcedureDescription.IsDataSet then
-    Query.Locate(ProcedureDescription.KeyFieldNames, Value, []);
+    MemTable.Locate(ProcedureDescription.KeyFieldNames, Value, []);
 end;
 
 procedure TProcedureFrame.Build(AParent: TWinControl);
 begin
   inherited Build(AParent);
-  FillQuery;
+//  FillQuery;
   if not ProcedureDescription.IsDataSet then
   begin
     TreeList.Visible := false;
@@ -756,9 +718,9 @@ begin
         end;
     end;
 
-  if (InsertActionsCount = 1) and Query.IsEmpty then
+  if (InsertActionsCount = 1) and MemTable.IsEmpty then
     CallAction(InsertAction)
-  else if (UpdateActionsCount = 1) and (not Query.IsEmpty) then
+  else if (UpdateActionsCount = 1) and (not MemTable.IsEmpty) then
     CallAction(UpdateAction);
 end;
 

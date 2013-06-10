@@ -12,7 +12,7 @@ type
     FQuery: TADQuery;
     procedure PrepareQuery(
       const AProcedure: TProcedureDescription;
-      AParams: TParamValues
+      const AParamValues: TParamValues
     );
   public
     constructor Create(AConnection: TADConnection); override;
@@ -23,17 +23,17 @@ type
 
     procedure QueryData(
       const AProcedure: TProcedureDescription;
-      AParams: TParamValues;
-      AData: TADMemTable
+      const AParamValues: TParamValues;
+      const AData: TADMemTable
     ); override;
     procedure ExecuteProcedure(
-      const AProcedure: TProcedureDescription; AParams: TParamValues
+      const AProcedure: TProcedureDescription; const AParamValues: TParamValues
     ); override;
   end;
 
   TOracleDirectConnection = class (TDirectConnection)
   protected
-    procedure AfterConnect; override;
+    procedure BeforeConnect; override;
     function GetDirectTransactionClass: TDirectTransactionClass; override;
   end;
 
@@ -48,7 +48,7 @@ uses
 
 { TOracleDirectConnection }
 
-procedure TOracleDirectConnection.AfterConnect;
+procedure TOracleDirectConnection.BeforeConnect;
 begin
   inherited;
   GetConnection.DriverName := 'ORA';
@@ -75,10 +75,11 @@ begin
 end;
 
 procedure TOracleDirectTransaction.ExecuteProcedure(
-  const AProcedure: TProcedureDescription; AParams: TParamValues);
+  const AProcedure: TProcedureDescription; const AParamValues: TParamValues);
 begin
+  inherited;
   Assert(not AProcedure.IsDataSet);
-  PrepareQuery(AProcedure, AParams);
+  PrepareQuery(AProcedure, AParamValues);
   FQuery.Execute();
 end;
 
@@ -89,7 +90,7 @@ begin
 end;
 
 procedure TOracleDirectTransaction.PrepareQuery(
-  const AProcedure: TProcedureDescription; AParams: TParamValues);
+  const AProcedure: TProcedureDescription; const AParamValues: TParamValues);
 var
   QueryText: string;
   QueryParams: string;
@@ -114,19 +115,21 @@ begin
   QueryText := QueryText + '; end;';
 
   FQuery.SQL.Text := QueryText;
-  FillQueryParams(FQuery, AProcedure);
+  FillQueryParams(FQuery, AProcedure, AParamValues);
 end;
 
 procedure TOracleDirectTransaction.QueryData(
-  const AProcedure: TProcedureDescription; AParams: TParamValues;
-  AData: TADMemTable);
+  const AProcedure: TProcedureDescription;
+  const AParamValues: TParamValues;
+  const AData: TADMemTable);
 begin
   inherited;
   Assert(AProcedure.IsDataSet);
-  PrepareQuery(AProcedure, AParams);
+  PrepareQuery(AProcedure, AParamValues);
   FQuery.Open;
   try
     AData.CloneCursor(FQuery, true);
+    FillDataSetFields(AData, AProcedure);
   finally
     FQuery.Close;
   end;

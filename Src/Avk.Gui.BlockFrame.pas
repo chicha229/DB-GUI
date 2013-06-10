@@ -9,7 +9,7 @@ uses
   cxScrollBox, cxLabel, System.Generics.Collections, Vcl.StdCtrls,
 
   Avk.Gui.Descriptions, Vcl.ExtCtrls, cxGroupBox, cxPCdxBarPopupMenu, cxPC,
-  cxTextEdit, uFormErrors, dxSkinsCore,
+  cxTextEdit, uFormErrors, dxSkinsCore, Avk.Gui.Connection,
   dxBar, cxClasses, dxSkinsDefaultPainters, dxSkinsdxBarPainter;
 
 type
@@ -46,6 +46,9 @@ type
     FOwnerFrame: TBlockFrame;
     FChangedParams: TObjectDictionary<integer, TParamValues>;
     FUnchangedParams: TStrings;
+    FRefParamValues: TParamValues;
+    FTransaction: ITransaction;
+    FIsTransactionStart: boolean;
 
     procedure SetBlockDescription(const Value: TBlockDescription);
     procedure CreateParamEditors;
@@ -58,6 +61,9 @@ type
     procedure CreateActions;
     procedure FillFormErrors;
     procedure SetOwnerFrame(const Value: TBlockFrame);
+    procedure SetIsTransactionStart(const Value: boolean);
+  protected
+    procedure SetTransaction(const Value: ITransaction); virtual;
   public
     { Public declarations }
     IsOpened: boolean;
@@ -104,6 +110,7 @@ type
     function Save: boolean; virtual;
 
     function Modified: boolean; virtual;
+    procedure DropChanges; virtual;
 
     function CreateParamEditor(
       P: TParamDescription;
@@ -123,6 +130,8 @@ type
     property OwnerFrame: TBlockFrame read FOwnerFrame write SetOwnerFrame;
 
     property ChangedParams: TObjectDictionary<integer, TParamValues> read FChangedParams;
+    property Transaction: ITransaction read FTransaction write SetTransaction;
+    property IsTransactionStart: boolean read FIsTransactionStart write SetIsTransactionStart;
   end;
 
   TBlockFrameClass = class of TBlockFrame;
@@ -202,7 +211,13 @@ begin
   FParamValues.Free;
   FChangedParams.Free;
   FUnchangedParams.Free;
+  FRefParamValues.Free;
   inherited;
+end;
+
+procedure TBlockFrame.DropChanges;
+begin
+  ;
 end;
 
 procedure TBlockFrame.EditorsToParamValues;
@@ -298,6 +313,7 @@ begin
   FParamControls := TObjectDictionary<string, TParamControls>.Create([doOwnsValues]);
   FGroupControls := TObjectDictionary<string, TWinControl>.Create([doOwnsValues]);
   FChangedParams := TObjectDictionary<integer, TParamValues>.Create([doOwnsValues]);
+  FRefParamValues := TParamValues.Create;
   FParamValues := TParamValues.Create;
   FUnchangedParams := TStringList.Create;
 end;
@@ -527,7 +543,7 @@ begin
   RefBlock := BlocksManager.Blocks[R.RefsTo];
   L.Properties.KeyFieldNames := RefBlock.KeyFieldNames;
   L.Properties.ListFieldNames := RefBlock.NameFieldNames;
-  L.Properties.ListSource := CustomMainDM.GetRefDataSource(R.RefsTo);
+  L.Properties.ListSource := CustomMainDM.GetRefInfo(R.RefsTo).DataSource;
 
   L.Properties.DropDownSizeable := true;
 end;
@@ -716,7 +732,7 @@ var
   RefId: integer;
   Ref: TBlockRef;
   RefBind: TBlockRefBind;
-  RefQuery: TADQuery;
+  RefInfo: TRefInfo;
 begin
   if BlockDescription.BlockRefs.Count = 0 then
     Exit;
@@ -726,19 +742,13 @@ begin
     // измененное значение. какой из рефов зависит от этого
     for RefId in BlockDescription.BlockRefs.Keys do
     begin
-      RefQuery := nil;
+      RefInfo := nil;
       Ref := BlockDescription.BlockRefs[RefId];
       for RefBind in Ref.Binds.Values do
         if (RefBind.SourceBlockId = 0) and (RefBind.SourceParam = ParamName) then
-        begin
-          RefQuery := (CustomMainDM.GetRefDataSource(Ref.RefsTo).DataSet as TADQuery);
-          RefQuery.ParamByName(ParamName).Value := ParamValues[ParamName];
-        end;
-      if Assigned(RefQuery) then
-      begin
-        RefQuery.Close;
-        RefQuery.Open;
-      end;
+          RefInfo := CustomMainDM.GetRefInfo(Ref.RefsTo);
+      if Assigned(RefInfo) then
+        RefInfo.RefreshData(ParamValues);
     end;
 end;
 
@@ -807,21 +817,19 @@ end;
 procedure TBlockFrame.OpenRefParamLookups;
 var
   R: TBlockRef;
-  RC: TParamControls;
-  Q: TADQuery;
   RB: TBlockRefBind;
+  RefInfo: TRefInfo;
 begin
+  FRefParamValues.Clear;
   for R in BlockDescription.BlockRefs.Values do
     if RefControls.ContainsKey(R.ID) then
     begin
-      RC := RefControls[R.ID];
-      Q := (RC.FEditorControl as TcxLookupComboBox).Properties.ListSource.DataSet as TADQuery;
+      RefInfo := CustomMainDM.GetRefInfo(R.RefsTo);
       if BlockDescription.ChildId = 0 then
         for RB in R.Binds.Values do
           if RB.SourceBlockId = 0 then
-            Q.ParamByName(RB.DestinationParam).Value := ParamValues[RB.SourceParam];
-      Q.Open;
-      CustomMainDM.FillQueryFields(Q, BlocksManager.Blocks[R.RefsTo]);
+            FRefParamValues.Add(RB.DestinationParam, ParamValues[RB.SourceParam]);
+      RefInfo.RefreshData(FRefParamValues);
     end;
 end;
 
@@ -913,6 +921,8 @@ procedure TBlockFrame.CallAction(A: TBlockAction);
 var
   P: TPair<string, string>;
   PV: TParamValues;
+  T: ITransaction;
+  TS: boolean;
 begin
   if A.LinksToName = '' then
     Exit;
@@ -921,7 +931,19 @@ begin
     PostEditorsValues;
     for P in A.ParamBinds.ToArray do
       PV.Add(P.Value, ParamValues[P.Key]);
-    if CustomMainForm.ShowBlock(A.LinksTo, PV) then
+
+    if Transaction = CustomMainDM.MainTransaction then
+    begin
+      T := CustomMainDM.Connection.StartTransaction;
+      TS := true;
+    end
+    else
+    begin
+      T := Transaction;
+      TS := false;
+    end;
+
+    if CustomMainForm.ShowBlock(A.LinksTo, T, TS, PV) then
       OnAfterAction(A, PV);
   finally
     PV.Free;
@@ -946,9 +968,19 @@ begin
     SetButtonProperties(BarManager.Items[i]);
 end;
 
+procedure TBlockFrame.SetIsTransactionStart(const Value: boolean);
+begin
+  FIsTransactionStart := Value;
+end;
+
 procedure TBlockFrame.SetOwnerFrame(const Value: TBlockFrame);
 begin
   FOwnerFrame := Value;
+end;
+
+procedure TBlockFrame.SetTransaction(const Value: ITransaction);
+begin
+  FTransaction := Value;
 end;
 
 { TParamControls }

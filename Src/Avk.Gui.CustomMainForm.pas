@@ -8,7 +8,8 @@ uses
   Avk.Gui.Descriptions, cxGraphics, cxControls,
   cxLookAndFeels, cxLookAndFeelPainters, cxPCdxBarPopupMenu, cxPC,
   Avk.Gui.BlockFrame, Avk.Gui.CustomMainDM, cxSplitter, Avk.Gui.FormFrame,
-  dxSkinsCore, dxSkinsDefaultPainters, dxSkinscxPCPainter;
+  dxSkinsCore, dxSkinsDefaultPainters, dxSkinscxPCPainter,
+  Avk.Gui.Connection;
 
 type
   TCustomMainForm = class (TForm)
@@ -24,9 +25,17 @@ type
     property GuiObjectsFrame: TBlockFrame read FGuiObjectsFrame;
     class function GetMainDMClass: TCustomMainDataModuleClass; virtual; abstract;
 
-    function CreateBlockFrame(ABlock: TBlockDescription; AOwner: TComponent): TBlockFrame;
+    function CreateBlockFrame(
+      ABlock: TBlockDescription;
+      ATransaction: ITransaction;
+      AIsTransactionStart: boolean;
+      AOwner: TComponent
+    ): TBlockFrame;
     function ShowBlock(
-      ABlockDescription: TBlockDescription; AParamValues: TParamValues
+      ABlockDescription: TBlockDescription;
+      ATransaction: ITransaction;
+      AIsTransactionStart: boolean;
+      AParamValues: TParamValues
     ): boolean;
   end;
 
@@ -48,9 +57,15 @@ procedure TCustomMainForm.FormCreate(Sender: TObject);
 begin
   CustomMainForm := Self;
   CustomMainDM := Self.GetMainDMClass.Create(Application);
-  TDescriptionsLoaderDM.Execute(CustomMainDM.MainConnection);
+  CustomMainDM.Connection.Connect;
+  TDescriptionsLoaderDM.Execute;
 
-  FGuiObjectsFrame := CreateBlockFrame(BlocksManager.Blocks['UI$MENU_CR'], Self);
+  FGuiObjectsFrame := CreateBlockFrame(
+    BlocksManager.Blocks['UI$MENU_CR'],
+    CustomMainDM.MainTransaction,
+    false,
+    Self
+  );
   FGuiObjectsFrame.Build(Self);
   FGuiObjectsFrame.Open;
   FGuiObjectsFrame.Align := alLeft;
@@ -65,7 +80,12 @@ begin
   WindowState := wsMaximized;
 end;
 
-function TCustomMainForm.CreateBlockFrame(ABlock: TBlockDescription; AOwner: TComponent): TBlockFrame;
+function TCustomMainForm.CreateBlockFrame(
+  ABlock: TBlockDescription;
+  ATransaction: ITransaction;
+  AIsTransactionStart: boolean;
+  AOwner: TComponent
+): TBlockFrame;
 var
   C: TClass;
 begin
@@ -80,19 +100,36 @@ begin
     Result := TProcedureFrame.Create(AOwner)
   else if ABlock is TFormDescription then
     Result := TFormFrame.Create(AOwner)
+{
   else if ABlock is TBlockDescription then
     Result := TBlockFrame.Create(AOwner)
+}
   else
     raise Exception.CreateFmt(
       'Cannot find frame to create from block %s',
       [ABlock.Name]
     );
+
+  if Result is TProcedureFrame then
+  begin
+    (Result as TProcedureFrame).Transaction := ATransaction;
+    (Result as TProcedureFrame).IsTransactionStart := AIsTransactionStart;
+  end
+  else if Result is TFormFrame then
+  begin
+    (Result as TFormFrame).Transaction := ATransaction;
+    (Result as TFormFrame).IsTransactionStart := AIsTransactionStart;
+  end;
+
   Result.Name := '';
   Result.BlockDescription := ABlock;
 end;
 
 function TCustomMainForm.ShowBlock(
-  ABlockDescription: TBlockDescription; AParamValues: TParamValues
+  ABlockDescription: TBlockDescription;
+  ATransaction: ITransaction;
+  AIsTransactionStart: boolean;
+  AParamValues: TParamValues
 ): boolean;
 var
   T: TcxTabSheet;
@@ -115,7 +152,12 @@ begin
     FrameParent := T;
     FormsPageControl.ActivePageIndex := T.TabIndex;
   end;
-  Frame := CreateBlockFrame(ABlockDescription, FrameParent);
+  Frame := CreateBlockFrame(
+    ABlockDescription,
+    ATransaction,
+    AIsTransactionStart,
+    FrameParent
+  );
   if Assigned(AParamValues) then
     Frame.AssignParamValues(AParamValues);
   Frame.Build(FrameParent);

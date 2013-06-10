@@ -7,7 +7,7 @@ uses
   uADStanIntf, uADStanOption, uADStanError, uADPhysIntf,
   uADStanDef, uADStanPool, uADStanAsync, uADPhysManager, uADPhysOracle, Data.DB,
   uADCompClient, uADCompGUIx, uADGUIxFormsWait, uADPhysIB, Vcl.ImgList,
-  Vcl.Controls, Avk.Gui.DbDependend, cxStyles, cxClasses, cxContainer, cxEdit;
+  Vcl.Controls, cxStyles, cxClasses, cxContainer, cxEdit;
 
 type
   TTestsMainDataModule = class (TCustomMainDataModule)
@@ -18,7 +18,7 @@ type
     { Private declarations }
   public
     { Public declarations }
-    function GetDBType: TSupportedDB; override;
+    function GetConnectionMode: string; override;
   end;
 
 var
@@ -30,15 +30,18 @@ implementation
 
 {$R *.dfm}
 
+uses
+  Avk.Gui.FirebirdDirectConnect;
+
 procedure TTestsMainDataModule.DataModuleCreate(Sender: TObject);
 begin
   inherited;
   TestsMainDataModule := Self;
 end;
 
-function TTestsMainDataModule.GetDBType: TSupportedDB;
+function TTestsMainDataModule.GetConnectionMode: string;
 begin
-  Result := sdbFirebird;
+  Result := FirebirdConnectMode;
 end;
 
 end.

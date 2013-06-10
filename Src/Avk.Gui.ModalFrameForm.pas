@@ -42,7 +42,7 @@ end;
 procedure TFrameModalForm.DropChanges;
 begin
   inherited;
-
+  FFrame.DropChanges;
 end;
 
 function TFrameModalForm.FormSectionName: string;

@@ -11,18 +11,18 @@ uses
 
 type
   TDescriptionsLoaderDM = class (TDataModule)
-    BlocksQuery: TADQuery;
-    ProceduresQuery: TADQuery;
-    FormsQuery: TADQuery;
-    BlockParamsQuery: TADQuery;
-    BlockActionsQuery: TADQuery;
-    ActionBindsQuery: TADQuery;
-    FormChildsQuery: TADQuery;
-    FormChildParamsQuery: TADQuery;
-    FormPanelsQuery: TADQuery;
-    BlockRefParamsQuery: TADQuery;
-    BlockRefBindsQuery: TADQuery;
-    ChildRefBindsQuery: TADQuery;
+    BlocksQuery: TADMemTable;
+    ProceduresQuery: TADMemTable;
+    FormsQuery: TADMemTable;
+    BlockParamsQuery: TADMemTable;
+    BlockActionsQuery: TADMemTable;
+    ActionBindsQuery: TADMemTable;
+    FormChildsQuery: TADMemTable;
+    FormChildParamsQuery: TADMemTable;
+    FormPanelsQuery: TADMemTable;
+    BlockRefParamsQuery: TADMemTable;
+    BlockRefBindsQuery: TADMemTable;
+    ChildRefBindsQuery: TADMemTable;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
   private
@@ -37,7 +37,7 @@ type
 
     FTempProcedureDescription: TProcedureDescription;
 
-    procedure InternalExecute(AConnection: TADConnection);
+    procedure InternalExecute;
     procedure LoadBlock(AID: string; ADescription: TBlockDescription);
     procedure LoadForm(AID: string; ADescription: TFormDescription);
     procedure LoadProcedure(AID: string; ADescription: TProcedureDescription);
@@ -48,12 +48,12 @@ type
     procedure FillChildRefBinds(ChildId: integer; BlockRef: TBlockRef);
   public
     { Public declarations }
-    class procedure Execute(AConnection: TADConnection);
+    class procedure Execute;
   end;
 
 implementation
 
-{%CLASSGROUP 'System.Classes.TPersistent'}
+{%CLASSGROUP 'Vcl.Controls.TControl'}
 
 {$R *.dfm}
 
@@ -478,25 +478,18 @@ begin
 end;
 
 
-procedure TDescriptionsLoaderDM.InternalExecute(AConnection: TADConnection);
+procedure TDescriptionsLoaderDM.InternalExecute;
 
 procedure PrepareQueries;
-var
-  i: integer;
 
-  procedure OpenProcedureQuery(AProcedureName: string; AQuery: TADQuery);
+  procedure OpenProcedureQuery(AProcedureName: string; AData: TADMemTable);
   begin
     // для оракла - в спец. пакете
     FTempProcedureDescription.ProcedureName := AProcedureName;
-    CustomMainDM.DBDependend.FillQuery(FTempProcedureDescription, AQuery);
-    AQuery.Open;
+    CustomMainDM.MainTransaction.QueryData(FTempProcedureDescription, nil, AData);
   end;
 
 begin
-  for i := 0 to ComponentCount - 1 do
-    if Components[i] is TADQuery then
-      (Components[i] as TADQuery).Connection := AConnection;
-
   OpenProcedureQuery('ui$cr_block', BlocksQuery);
   OpenProcedureQuery('ui$cr_procedure', ProceduresQuery);
   OpenProcedureQuery('ui$cr_block_param', BlockParamsQuery);
@@ -594,13 +587,13 @@ begin
   FLoadedBlockRefBinds.Free;
 end;
 
-class procedure TDescriptionsLoaderDM.Execute(AConnection: TADConnection);
+class procedure TDescriptionsLoaderDM.Execute;
 var
   D: TDescriptionsLoaderDM;
 begin
   D := TDescriptionsLoaderDM.Create(nil);
   try
-    D.InternalExecute(AConnection);
+    D.InternalExecute;
   finally
     D.Free;
   end;

@@ -9,7 +9,7 @@ uses
   dxSkinsCore, uFormErrors, Vcl.ExtCtrls, cxLabel,
   System.Generics.Collections,
   Avk.Gui.Descriptions, dxBar, cxClasses, uAdCompClient, dxSkinsDefaultPainters,
-  dxSkinsdxBarPainter;
+  dxSkinsdxBarPainter, Avk.Gui.Connection;
 
 type
   TFormFrame = class (TBlockFrame)
@@ -19,12 +19,14 @@ type
     { Private declarations }
     FFrames: TObjectDictionary<integer, TBlockFrame>;
     FParentControls: TObjectList<TWinControl>;
-    FConnection: TADConnection;
+    FRefParamValues: TParamValues;
+    FSavepointName: string;
 
     function GetFormDescription: TFormDescription;
     procedure BuildPanel(APanel: TPanelDescription; AParent: TWinControl);
     procedure BindFrameParamsFromSource(Frame: TBlockFrame; var AllParamsBinded: Boolean);
-    procedure SetConnection(const Value: TADConnection);
+  protected
+    procedure SetTransaction(const Value: ITransaction); override;
   public
     { Public declarations }
     constructor Create(AOwner: TComponent); override;
@@ -33,12 +35,12 @@ type
     function Open: boolean; override;
     function Save: boolean; override;
     function Modified: boolean; override;
+    procedure DropChanges; override;
 
     procedure OnChangeParamValues(Sender: TBlockFrame; AChangeId: Int64); override;
 
     procedure Build(AParent: TWinControl); override;
     property FormDescription: TFormDescription read GetFormDescription;
-    property Connection: TADConnection read FConnection write SetConnection;
   end;
 
 implementation
@@ -152,7 +154,7 @@ begin
       end
       else if Assigned(Block) then
       begin
-        F := CustomMainForm.CreateBlockFrame(Block, Self);
+        F := CustomMainForm.CreateBlockFrame(Block, Transaction, false, Self);
         F.Build(CP);
         FFrames.Add(Block.ChildId, F);
         F.OwnerFrame := Self;
@@ -273,8 +275,8 @@ var
   PV: TParamValues;
   RefId: integer;
   Ref: TBlockRef;
+  RefInfo: TRefInfo;
   RefBind: TBlockRefBind;
-  RefQuery: TADQuery;
   RefFrame: TBlockFrame;
   FrameChangeId: Int64;
 begin
@@ -287,7 +289,8 @@ begin
       try
         for RefId in RefFrame.BlockDescription.BlockRefs.Keys do
         begin
-          RefQuery := nil;
+          RefInfo := nil;
+          FRefParamValues.Clear;
           Ref := RefFrame.BlockDescription.BlockRefs[RefId];
           for RefBind in Ref.Binds.Values do
             if
@@ -295,14 +298,11 @@ begin
               (RefBind.SourceParam = ParamName)
             then
             begin
-              RefQuery := (CustomMainDM.GetRefDataSource(Ref.RefsTo).DataSet as TADQuery);
-              RefQuery.ParamByName(RefBind.DestinationParam).Value := Sender.ParamValues[ParamName];
+              RefInfo := CustomMainDM.GetRefInfo(Ref.RefsTo);
+              FRefParamValues.Add(RefBind.DestinationParam, Sender.ParamValues[ParamName]);
             end;
-          if Assigned(RefQuery) then
-          begin
-            RefQuery.Close;
-            RefQuery.Open;
-          end;
+          if Assigned(RefInfo) then
+            RefInfo.RefreshData(FRefParamValues);
         end;
       finally
         RefFrame.EndParamChanging(FrameChangeId);
@@ -418,41 +418,33 @@ function TFormFrame.Open: boolean;
       Frame.IsOpening := false;
   end;
 
-  procedure SetRefQueriesParamValues;
+  procedure OpenRefs;
   var
     F: TBlockFrame;
     R: TBlockRef;
     B: TBlockRefBind;
-    RefQuery: TADQuery;
-    ParamValuesChanged: boolean;
+    RefInfo: TRefInfo;
     SourceFrame: TBlockFrame;
   begin
     for F in FFrames.Values do
       for R in F.BlockDescription.BlockRefs.Values do
       begin
-        RefQuery := (CustomMainDM.GetRefDataSource(R.RefsTo).DataSet as TADQuery);
-        if not Assigned(RefQuery) then
+        RefInfo := CustomMainDM.GetRefInfo(R.RefsTo);
+        if not Assigned(RefInfo) then
           Continue;
-        ParamValuesChanged := false;
+        FRefParamValues.Clear;
         for B in R.Binds.Values do
         begin
           if B.SourceBlockId = 0 then
             SourceFrame := Self
           else
             SourceFrame := FFrames[B.SourceBlockId];
-          if RefQuery.ParamByName(B.DestinationParam).Value <>
-            SourceFrame.ParamValues[B.SourceParam] then
-          begin
-            RefQuery.ParamByName(B.DestinationParam).Value :=
-              SourceFrame.ParamValues[B.SourceParam];
-            ParamValuesChanged := true;
-          end;
+          FRefParamValues.Add(
+            B.DestinationParam,
+            SourceFrame.ParamValues[B.SourceParam]
+          );
         end;
-        if ParamValuesChanged then
-        begin
-          RefQuery.Close;
-          RefQuery.Open;
-        end;
+        RefInfo.RefreshData(FRefParamValues);
       end;
   end;
 
@@ -461,10 +453,13 @@ begin
   Self.IsOpening := true;
 
   OpenChildFrames;
-  SetRefQueriesParamValues;
+  OpenRefs;
 
   Self.IsOpening := false;
   Result := true;
+
+  FSavepointName := 'S$' + IntToStr(GetSavepointId);
+  Transaction.MakeSavepoint(FSavepointName);
 end;
 
 function TFormFrame.Save: boolean;
@@ -481,19 +476,21 @@ begin
     F.Save;
     F.IsOpened := true;
   end;
+  if IsTransactionStart then
+    Transaction.Commit;
   Result := true;
 end;
 
-procedure TFormFrame.SetConnection(const Value: TADConnection);
+procedure TFormFrame.SetTransaction(const Value: ITransaction);
 var
   F: TBlockFrame;
 begin
-  FConnection := Value;
+  inherited SetTransaction(Value);
   for F in FFrames.Values do
     if F is TProcedureFrame then
-      (F as TProcedureFrame).Connection := Value
+      (F as TProcedureFrame).Transaction := Value
     else if F is TFormFrame then
-      (F as TFormFrame).Connection := Value
+      (F as TFormFrame).Transaction := Value
 end;
 
 constructor TFormFrame.Create(AOwner: TComponent);
@@ -502,13 +499,23 @@ begin
   FFrames := TObjectDictionary<integer, TBlockFrame>.Create([]);
   FParentControls := TObjectList<TWinControl>.Create;
   FParentControls.OwnsObjects := false;
+  FRefParamValues := TParamValues.Create;
 end;
 
 destructor TFormFrame.Destroy;
 begin
   FFrames.Free;
   FParentControls.Free;
+  FRefParamValues.Free;
   inherited;
+end;
+
+procedure TFormFrame.DropChanges;
+begin
+  if IsTransactionStart then
+    Transaction.Rollback
+  else
+    Transaction.RollbackToSavepoint(FSavepointName);
 end;
 
 { TIndexOnParentComparer<T> }

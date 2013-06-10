@@ -12,7 +12,7 @@ type
     FQuery: TADQuery;
     procedure PrepareQuery(
       const AProcedure: TProcedureDescription;
-      AParams: TParamValues
+      AParamValues: TParamValues
     );
   public
     constructor Create(AConnection: TADConnection); override;
@@ -23,17 +23,17 @@ type
 
     procedure QueryData(
       const AProcedure: TProcedureDescription;
-      AParams: TParamValues;
-      AData: TADMemTable
+      const AParamValues: TParamValues;
+      const AData: TADMemTable
     ); override;
     procedure ExecuteProcedure(
-      const AProcedure: TProcedureDescription; AParams: TParamValues
+      const AProcedure: TProcedureDescription; const AParamValues: TParamValues
     ); override;
   end;
 
   TFirebirdDirectConnection = class (TDirectConnection)
   protected
-    procedure AfterConnect; override;
+    procedure BeforeConnect; override;
     function GetDirectTransactionClass: TDirectTransactionClass; override;
   end;
 
@@ -48,7 +48,7 @@ uses
 
 { TFirebirdDirectConnection }
 
-procedure TFirebirdDirectConnection.AfterConnect;
+procedure TFirebirdDirectConnection.BeforeConnect;
 begin
   inherited;
   GetConnection.DriverName := 'IB';
@@ -66,6 +66,7 @@ begin
   inherited;
   FQuery := TADQuery.Create(nil);
   FQuery.Transaction := GetTransaction;
+  FQuery.Connection := GetTransaction.Connection;
 end;
 
 destructor TFirebirdDirectTransaction.Destroy;
@@ -75,10 +76,11 @@ begin
 end;
 
 procedure TFirebirdDirectTransaction.ExecuteProcedure(
-  const AProcedure: TProcedureDescription; AParams: TParamValues);
+  const AProcedure: TProcedureDescription; const AParamValues: TParamValues);
 begin
+  inherited;
   Assert(not AProcedure.IsDataSet);
-  PrepareQuery(AProcedure, AParams);
+  PrepareQuery(AProcedure, AParamValues);
   FQuery.Execute();
 end;
 
@@ -89,7 +91,7 @@ begin
 end;
 
 procedure TFirebirdDirectTransaction.PrepareQuery(
-  const AProcedure: TProcedureDescription; AParams: TParamValues);
+  const AProcedure: TProcedureDescription; AParamValues: TParamValues);
 var
   QueryText: string;
   QueryParams: string;
@@ -101,7 +103,7 @@ begin
     QueryText := 'execute procedure ' + AProcedure.ProcedureName;
 
   QueryParams := '';
-  for PD in AProcedure.SortedParams do
+  for PD in AProcedure.CallSortedParams do
   begin
     if PD.ParamDirection = pdIn then
     begin
@@ -122,19 +124,21 @@ begin
     QueryText := QueryText + '(' + QueryParams + ')';
 
   FQuery.SQL.Text := QueryText;
-  FillQueryParams(FQuery, AProcedure);
+  FillQueryParams(FQuery, AProcedure, AParamValues);
 end;
 
 procedure TFirebirdDirectTransaction.QueryData(
-  const AProcedure: TProcedureDescription; AParams: TParamValues;
-  AData: TADMemTable);
+  const AProcedure: TProcedureDescription;
+  const AParamValues: TParamValues;
+  const AData: TADMemTable);
 begin
   inherited;
   Assert(AProcedure.IsDataSet);
-  PrepareQuery(AProcedure, AParams);
+  PrepareQuery(AProcedure, AParamValues);
   FQuery.Open;
   try
-    AData.CloneCursor(FQuery, true);
+    AData.CloneCursor(FQuery);
+    FillDataSetFields(AData, AProcedure);
   finally
     FQuery.Close;
   end;

@@ -28,11 +28,11 @@ type
 
     procedure QueryData(
       const AProcedure: TProcedureDescription;
-      AParams: TParamValues;
-      AData: TADMemTable
+      const AParamValues: TParamValues;
+      const AData: TADMemTable
     );
     procedure ExecuteProcedure(
-      const AProcedure: TProcedureDescription; AParams: TParamValues
+      const AProcedure: TProcedureDescription; const AParamValues: TParamValues
     );
   end;
 

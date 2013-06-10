@@ -336,7 +336,6 @@ type
     constructor Create; override;
     destructor Destroy; override;
 
-
     property Blocks: TObjectDictionary<integer, TBlockDescription> read FBlocks;
     property RootPanel: TPanelDescription read FRootPanel write SetRootPanel;
     property Panels: TObjectDictionary<integer, TPanelDescription> read FPanels;
@@ -864,6 +863,7 @@ var
   FieldsFound: boolean;
   KeyFieldsList: TStrings;
   F: string;
+  CursorParamsCount: integer;
 begin
   inherited;
   if ProcedureName = '' then
@@ -899,6 +899,15 @@ begin
     )
   then
     AddValidationError('Включено дерево, но поле предка не найдено');
+
+  CursorParamsCount := 0;
+  for P in Params.Values do
+    if P.ParamDirection = pdCursor then
+      Inc(CursorParamsCount);
+  if CursorParamsCount > 1 then
+    AddValidationError('Количество параметров - курсоров > 1');
+  if (CursorParamsCount = 1) and (not IsDataSet) then
+    AddValidationError('Есть параметр-курсор, но процедура - не датасет');
 end;
 
 { TPanelDescription }

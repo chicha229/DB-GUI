@@ -114,7 +114,6 @@
             <Form>ProcedureFrame</Form>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
-        <DCCReference Include="Src\Avk.Gui.DbDependend.pas"/>
         <DCCReference Include="Src\Avk.Gui.FormFrame.pas">
             <Form>FormFrame</Form>
             <FormType>dfm</FormType>

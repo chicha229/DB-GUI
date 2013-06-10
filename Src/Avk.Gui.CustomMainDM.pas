@@ -14,9 +14,28 @@ type
   TCustomMainDataModule = class;
   TCustomMainDataModuleClass = class of TCustomMainDataModule;
 
+  TRefInfo = class
+  private
+    FRefsTo: TProcedureDescription;
+    FDataSet: TADMemTable;
+    FDataSource: TDataSource;
+    FCallParamValues: TParamValues;
+  public
+    constructor Create(
+      ARefsTo: TProcedureDescription;
+      ADataSet: TADMemTable;
+      ADataSource: TDataSource
+    );
+    destructor Destroy; override;
+
+    procedure RefreshData(AParamValues: TParamValues);
+
+    property DataSource: TDataSource read FDataSource;
+    property DataSet: TADMemTable read FDataSet;
+  end;
+
   TCustomMainDataModule = class (TDataModule)
     ADGUIxWaitCursor1: TADGUIxWaitCursor;
-    MainConnection: TADConnection;
     Images: TImageList;
     cxStyleRepository: TcxStyleRepository;
     GridHeaderStyle: TcxStyle;
@@ -24,7 +43,7 @@ type
   private
     FConnection: IConnection;
     FMainTransaction: ITransaction;
-    FCommonRefs: TObjectDictionary<string, TDataSource>;
+    FCommonRefs: TObjectDictionary<string, TRefInfo>;
     FLogDetails: TStrings;
 
     function GetConnection: IConnection;
@@ -38,10 +57,11 @@ type
     function GetConnectionMode: string; virtual; abstract;
     property Connection: IConnection read GetConnection;
     property MainTransaction: ITransaction read GetMainTransaction;
-    function GetRefDataSource(ARefBlockName: string): TDataSource;
-    procedure FillQueryFields(ADataset: TDataSet; ABlock: TBlockDescription);
+    function GetRefInfo(ARefBlockName: string): TRefInfo;
     procedure OnRefreshProcedure(AProcedureName: string);
   end;
+
+function GetSavepointId: integer;
 
 var
   CustomMainDM: TCustomMainDataModule;
@@ -51,14 +71,25 @@ implementation
 {%CLASSGROUP 'Vcl.Controls.TControl'}
 
 uses
-  CodeSiteLogging, uADStanParam;
+  Variants,
+  uADStanParam,
+  AVK.Core.Utils;
 
 {$R *.dfm}
+
+var
+  GSavepointId: integer;
+
+function GetSavepointId: integer;
+begin
+  Inc(GSavepointId);
+  Result := GSavepointId;
+end;
 
 constructor TCustomMainDataModule.Create(AOwner: TComponent);
 begin
   inherited;
-  FCommonRefs := TObjectDictionary<string, TDataSource>.Create([]);
+  FCommonRefs := TObjectDictionary<string, TRefInfo>.Create([doOwnsValues]);
   FLogDetails := TStringList.Create;
 end;
 
@@ -70,21 +101,23 @@ begin
 end;
 
 function TCustomMainDataModule.GetConnection: IConnection;
+var
+  ConnectionString: string;
 begin
   if not Assigned(FConnection) then
+  begin
     FConnection := TConnectionFactory.CreateConnection(GetConnectionMode);
+    ConnectionString := LoadSettingsValue('common', 'ConnectionString');
+    FConnection.SetConnectionString(ConnectionString);
+  end;
   Result := FConnection;
 end;
 
-procedure TCustomMainDataModule.LogRefQueryOpen(Sender: TDataSet);
-begin
-  LogQueryOpen(Sender as TADQuery, 'ref query open');
-end;
-
-function TCustomMainDataModule.GetRefDataSource(
-  ARefBlockName: string): TDataSource;
+function TCustomMainDataModule.GetRefInfo(
+  ARefBlockName: string): TRefInfo;
 var
   D: TADMemTable;
+  DS: TDataSource;
   F: TFormDescription;
   B: TBlockdescription;
   P: TProcedureDescription;
@@ -101,8 +134,9 @@ begin
     end;
     D := TADMemTable.Create(nil);
     MainTransaction.QueryData(P, nil, D);
-    Result := TDataSource.Create(Self);
-    Result.DataSet := D;
+    DS := TDataSource.Create(Self);
+    DS.DataSet := D;
+    Result := TRefInfo.Create(P, D, DS);
     FCommonRefs.Add(ARefBlockName, Result);
   end
   else
@@ -118,55 +152,92 @@ end;
 
 procedure TCustomMainDataModule.OnRefreshProcedure(AProcedureName: string);
 var
-  DS: TDataSet;
+  DS: TADMemTable;
 begin
-  DS := FCommonRefs[AProcedureName].DataSet;
-  if FCommonRefs.ContainsKey(AProcedureName) and DS.Active then
+  if not FCommonRefs.ContainsKey(AProcedureName) then
+    Exit;
+  DS := FCommonRefs[AProcedureName].DataSet as TADMemTable;
+  if DS.Active then
   begin
     DS.Close;
-    MainTransaction.QueryData(BlocksManager.Blocks[AProcedureName], nil, DS);
+    MainTransaction.QueryData(
+      BlocksManager.Blocks[AProcedureName] as TProcedureDescription,
+      nil,
+      DS
+    );
   end;
 end;
 
-{
-procedure TCustomMainDataModule.LogQueryOpen(Q: TADQuery; Msg: string);
-var
-  i: Integer;
-  ParamValue: string;
+{ TRefInfo }
+
+constructor TRefInfo.Create(
+  ARefsTo: TProcedureDescription;
+  ADataSet: TADMemTable;
+  ADataSource: TDataSource
+);
 begin
-  FLogDetails.Clear;
-  FLogDetails.Add(Q.Sql.Text);
-  for i := 0 to Q.Params.Count - 1 do
+  FRefsTo := ARefsTo;
+  FDataSet := ADataSet;
+  FDataSource := ADataSource;
+  FCallParamValues := TParamValues.Create;
+end;
+
+destructor TRefInfo.Destroy;
+begin
+  FDataSet.Free;
+  FDataSource.Free;
+  FCallParamValues.Free;
+  inherited;
+end;
+
+procedure TRefInfo.RefreshData(AParamValues: TParamValues);
+var
+  ParamsChanged: boolean;
+  PD: string;
+begin
+  if not DataSet.Active then
   begin
-    try
-      ParamValue := Q.Params[i].AsString;
-    except
-      ParamValue := '';
-    end;
-    FLogDetails.Add(Format('%s = %s', [Q.Params[i].Name, ParamValue]));
-  end;
-  CodeSite.Send(Msg, FLogDetails);
-end;
-}
-
-procedure TCustomMainDataModule.FillQueryFields(ADataset: TDataSet; ABlock: TBlockDescription);
-var
-  P: TParamDescription;
-  F: TField;
-begin
-  for P in ABlock.Params.Values do
-    if P.ParamDirection = pdField then
-    begin
-      F := ADataset.FindField(P.Name);
-      if Assigned(F) then
+    AParamValues.Clear;
+    AddParamValues(AParamValues, FCallParamValues);
+    CustomMainDM.MainTransaction.QueryData(
+      FRefsTo,
+      AParamValues,
+      FDataSet
+    );
+  end
+  else
+  begin
+    ParamsChanged := false;
+    for PD in AParamValues.Keys do
+      if
+        (FRefsTo.Params[PD].ParamDirection in [pdIn, pdInOut]) and
+        (not VarIsNull(AParamValues[PD]))
+      then
       begin
-        F.DisplayLabel := P.DisplayLabel;
-        F.Visible := P.Visible;
+        if
+          (not FCallParamValues.ContainsKey(PD)) or
+          (FCallParamValues[PD] <> AParamValues[PD])
+        then
+        begin
+          FCallParamValues.AddOrSetValue(PD, AParamValues[PD]);
+          ParamsChanged := true;
+        end;
       end;
+    if ParamsChanged then
+    begin
+      CustomMainDM.MainTransaction.QueryData(
+        FRefsTo,
+        AParamValues,
+        FDataSet
+      );
+      AParamValues.Clear;
+      AddParamValues(AParamValues, FCallParamValues);
     end;
-//  TADMemTable(ADataset).SetDefaultFields(false);
+  end;
 end;
 
+initialization
+  GSavepointId := 0;
 
 end.
 

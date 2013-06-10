@@ -13,7 +13,8 @@ uses
   cxGridLevel, cxGridCustomView, cxGridCustomTableView, cxGridTableView,
   cxGridBandedTableView, cxGridDBBandedTableView, cxGrid, cxInplaceContainer,
   cxTLData, cxDBTL, Vcl.ExtCtrls, cxLabel, cxMaskEdit, dxSkinsCore,
-  cxCheckBox, cxTextEdit, cxButtonEdit, cxGroupBox;
+  cxCheckBox, cxTextEdit, cxButtonEdit, cxGroupBox, dxSkinsDefaultPainters,
+  dxSkinscxPCPainter, dxSkinsdxBarPainter;
 
 type
   TFormsMenuFrame = class (TProcedureFrame)
@@ -33,7 +34,7 @@ implementation
 {$R *.dfm}
 
 uses
-  Avk.Gui.CustomMainDM, Avk.Gui.CustomMainForm,
+  Avk.Gui.CustomMainDM, Avk.Gui.CustomMainForm, Avk.Gui.Connection,
   Avk.Gui.Descriptions, Avk.Gui.DescriptionsLoader;
 
 { TFormsMenuFrame }
@@ -41,7 +42,7 @@ uses
 procedure TFormsMenuFrame.AfterRefresh;
 begin
   inherited;
-  TDescriptionsLoaderDM.Execute(CustomMainDM.MainConnection);
+  TDescriptionsLoaderDM.Execute;
 end;
 
 procedure TFormsMenuFrame.Build(AParent: TWinControl);
@@ -52,12 +53,18 @@ end;
 
 procedure TFormsMenuFrame.OpenBlock;
 var
+  T: ITransaction;
   BlockName: string;
 begin
-  BlockName := Query.FieldByName('block').AsString;
+  BlockName := MemTable.FieldByName('block').AsString;
   if BlockName = '' then
     Exit;
-  CustomMainForm.ShowBlock(BlocksManager.Blocks[BlockName], nil);
+  if BlocksManager.Blocks[BlockName].IsModal then
+    T := CustomMainDM.Connection.StartTransaction
+  else
+    T := CustomMainDM.MainTransaction;
+
+  CustomMainForm.ShowBlock(BlocksManager.Blocks[BlockName], T, true, nil);
 end;
 
 procedure TFormsMenuFrame.OpenBarButtonClick(Sender: TObject);

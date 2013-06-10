@@ -12,14 +12,14 @@ inherited ProcedureFrame: TProcedureFrame
   end
   inherited ClientPanel: TPanel
     Width = 419
-    Height = 233
+    Height = 231
     ExplicitWidth = 419
-    ExplicitHeight = 233
+    ExplicitHeight = 231
     object TreeList: TcxDBTreeList [0]
       Left = 0
       Top = 100
       Width = 419
-      Height = 133
+      Height = 131
       Hint = ''
       Align = alClient
       Bands = <
@@ -36,7 +36,7 @@ inherited ProcedureFrame: TProcedureFrame
       Left = 0
       Top = 100
       Width = 419
-      Height = 133
+      Height = 131
       Align = alClient
       TabOrder = 1
       object GridTableView: TcxGridDBBandedTableView
@@ -105,7 +105,7 @@ inherited ProcedureFrame: TProcedureFrame
     DockControlHeights = (
       0
       0
-      49
+      51
       0)
     inherited BarManagerToolBar: TdxBar
       ItemLinks = <
@@ -213,16 +213,19 @@ inherited ProcedureFrame: TProcedureFrame
       OnClick = RefreshDataBarButtonClick
     end
   end
-  object Query: TADQuery
-    AfterOpen = QueryAfterOpen
-    AfterPost = QueryAfterPost
-    AfterScroll = QueryAfterPost
-    Left = 8
+  object DataSource: TDataSource
+    DataSet = MemTable
+    Left = 40
     Top = 144
   end
-  object DataSource: TDataSource
-    DataSet = Query
-    Left = 40
+  object MemTable: TADMemTable
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
+    Left = 8
     Top = 144
   end
 end

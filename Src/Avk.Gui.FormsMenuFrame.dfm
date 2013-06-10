@@ -9,12 +9,17 @@ inherited FormsMenuFrame: TFormsMenuFrame
       OptionsView.ColumnAutoWidth = True
       OnDblClick = TreeListDblClick
     end
+    inherited SearchPanel: TPanel
+      inherited SearchEdit: TcxButtonEdit
+        ExplicitHeight = 22
+      end
+    end
   end
   inherited BarManager: TdxBarManager
     DockControlHeights = (
       0
       0
-      49
+      51
       0)
   end
 end
