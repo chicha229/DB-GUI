@@ -7,7 +7,7 @@ uses
   uADStanOption, uADStanError, uADPhysIntf, uADStanDef, uADStanPool,
   uADStanAsync, uADPhysManager, Data.DB, uADCompClient, uADPhysOracle,
   uADCompGUIx, uADGUIxFormsWait,
-  Avk.Gui.DbDependend, Vcl.ImgList, Vcl.Controls, System.Generics.Collections,
+  Avk.Gui.Connection, Vcl.ImgList, Vcl.Controls, System.Generics.Collections,
   Avk.Gui.Descriptions, cxStyles, cxClasses, cxContainer, cxEdit;
 
 type
@@ -22,23 +22,24 @@ type
     GridHeaderStyle: TcxStyle;
     ReadOnlyEditStyleController: TcxEditStyleController;
   private
-    FDBDependend: TDBDependend;
+    FConnection: IConnection;
+    FMainTransaction: ITransaction;
     FCommonRefs: TObjectDictionary<string, TDataSource>;
     FLogDetails: TStrings;
 
-    function GetDBDependend: TDBDependend;
-    procedure LogRefQueryOpen(Sender: TDataSet);
+    function GetConnection: IConnection;
+    function GetMainTransaction: ITransaction;
     { Private declarations }
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     { Public declarations }
-    procedure LogQueryOpen(Q: TADQuery; Msg: string);
 
-    function GetDBType: TSupportedDB; virtual; abstract;
-    property DBDependend: TDBDependend read GetDBDependend;
+    function GetConnectionMode: string; virtual; abstract;
+    property Connection: IConnection read GetConnection;
+    property MainTransaction: ITransaction read GetMainTransaction;
     function GetRefDataSource(ARefBlockName: string): TDataSource;
-    procedure FillQueryFields(AQuery: TADQuery; ABlock: TBlockDescription);
+    procedure FillQueryFields(ADataset: TDataSet; ABlock: TBlockDescription);
     procedure OnRefreshProcedure(AProcedureName: string);
   end;
 
@@ -54,10 +55,6 @@ uses
 
 {$R *.dfm}
 
-type
-  TADQueryCrack = class (TADQuery)
-  end;
-
 constructor TCustomMainDataModule.Create(AOwner: TComponent);
 begin
   inherited;
@@ -72,11 +69,11 @@ begin
   inherited;
 end;
 
-function TCustomMainDataModule.GetDBDependend: TDBDependend;
+function TCustomMainDataModule.GetConnection: IConnection;
 begin
-  if not Assigned(FDBDependend) then
-    FDBDependend := TDBDependendFactory.CreateDependend(GetDBType);
-  Result := FDBDependend;
+  if not Assigned(FConnection) then
+    FConnection := TConnectionFactory.CreateConnection(GetConnectionMode);
+  Result := FConnection;
 end;
 
 procedure TCustomMainDataModule.LogRefQueryOpen(Sender: TDataSet);
@@ -87,7 +84,7 @@ end;
 function TCustomMainDataModule.GetRefDataSource(
   ARefBlockName: string): TDataSource;
 var
-  Q: TADQuery;
+  D: TADMemTable;
   F: TFormDescription;
   B: TBlockdescription;
   P: TProcedureDescription;
@@ -102,27 +99,36 @@ begin
       F := B as TFormDescription;
       P := BlocksManager.Blocks[F.MainProcedureName] as TProcedureDescription;
     end;
-    Q := TADQuery.Create(Self);
-    Q.Connection := MainConnection;
-    Q.AfterOpen := LogRefQueryOpen;
-    DBDependend.FillQuery(P, Q);
+    D := TADMemTable.Create(nil);
+    MainTransaction.QueryData(P, nil, D);
     Result := TDataSource.Create(Self);
-    Result.DataSet := Q;
+    Result.DataSet := D;
     FCommonRefs.Add(ARefBlockName, Result);
   end
   else
     Result := FCommonRefs[ARefBlockName];
 end;
 
-procedure TCustomMainDataModule.OnRefreshProcedure(AProcedureName: string);
+function TCustomMainDataModule.GetMainTransaction: ITransaction;
 begin
-  if
-    FCommonRefs.ContainsKey(AProcedureName) and
-    FCommonRefs[AProcedureName].DataSet.Active
-  then
-    FCommonRefs[AProcedureName].DataSet.Refresh;
+  if not Assigned(FMainTransaction) then
+    FMainTransaction := Connection.StartTransaction;
+  Result := FMainTransaction;
 end;
 
+procedure TCustomMainDataModule.OnRefreshProcedure(AProcedureName: string);
+var
+  DS: TDataSet;
+begin
+  DS := FCommonRefs[AProcedureName].DataSet;
+  if FCommonRefs.ContainsKey(AProcedureName) and DS.Active then
+  begin
+    DS.Close;
+    MainTransaction.QueryData(BlocksManager.Blocks[AProcedureName], nil, DS);
+  end;
+end;
+
+{
 procedure TCustomMainDataModule.LogQueryOpen(Q: TADQuery; Msg: string);
 var
   i: Integer;
@@ -141,8 +147,9 @@ begin
   end;
   CodeSite.Send(Msg, FLogDetails);
 end;
+}
 
-procedure TCustomMainDataModule.FillQueryFields(AQuery: TADQuery; ABlock: TBlockDescription);
+procedure TCustomMainDataModule.FillQueryFields(ADataset: TDataSet; ABlock: TBlockDescription);
 var
   P: TParamDescription;
   F: TField;
@@ -150,14 +157,14 @@ begin
   for P in ABlock.Params.Values do
     if P.ParamDirection = pdField then
     begin
-      F := AQuery.FindField(P.Name);
+      F := ADataset.FindField(P.Name);
       if Assigned(F) then
       begin
         F.DisplayLabel := P.DisplayLabel;
         F.Visible := P.Visible;
       end;
     end;
-  TADQueryCrack(AQuery).SetDefaultFields(false);
+//  TADMemTable(ADataset).SetDefaultFields(false);
 end;
 
 

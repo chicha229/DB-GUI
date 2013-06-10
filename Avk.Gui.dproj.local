@@ -19,15 +19,24 @@
     <Transaction>1899.12.30 00:00:00.000.656,C:\Programming\Projects\GUI\Src\Avk.Gui.ModalFrameForm.pas=C:\Programming\Projects\GUI\Unit1.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.074,C:\Projects\GUI\Src\Avk.Gui.ProcedureFrame.dfm=C:\Projects\GUI\Unit1.dfm</Transaction>
     <Transaction>1899.12.30 00:00:00.000.563,C:\Projects\GUI\Src\Avk.Gui.BaseFrame.dfm=C:\Projects\GUI\Unit1.dfm</Transaction>
+<<<<<<< HEAD
     <Transaction>1899.12.30 00:00:00.000.703,C:\Programming\Projects\GUI\Avk.GUI.CustomEditorForm.dfm=C:\Programming\Projects\_Core\uCustomEditor.dfm</Transaction>
     <Transaction>1899.12.30 00:00:00.000.511,C:\Projects\GUI\Src\uGuiTestMainDM.dfm=C:\Projects\GUI\Src\uGuiTetMainDM.dfm</Transaction>
     <Transaction>1899.12.30 00:00:00.000.171,C:\Programming\Projects\GUI\Src\Avk.Gui.CustomMainForm.dfm=C:\Programming\Projects\GUI\Unit2.dfm</Transaction>
     <Transaction>1899.12.30 00:00:00.000.109,C:\Programming\Projects\GUI\Src\Avk.Gui.FormsMenuFrame.dfm=C:\Programming\Projects\GUI\Unit1.dfm</Transaction>
     <Transaction>1899.12.30 00:00:00.000.133,C:\Projects\GUI\Src\uGuiTestsMain.dfm=C:\Users\avk\Documents\RAD Studio\Projects\Unit1.dfm</Transaction>
+=======
+    <Transaction>1899.12.30 00:00:00.000.171,C:\Programming\Projects\GUI\Src\Avk.Gui.GridFrame.dfm=C:\Programming\Projects\GUI\Src\Avk.Gui.ProcedureFrame.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.511,C:\Projects\GUI\Src\uGuiTestMainDM.dfm=C:\Projects\GUI\Src\uGuiTetMainDM.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.133,C:\Projects\GUI\Src\uGuiTestsMain.dfm=C:\Users\avk\Documents\RAD Studio\Projects\Unit1.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.109,C:\Programming\Projects\GUI\Src\Avk.Gui.FormsMenuFrame.dfm=C:\Programming\Projects\GUI\Unit1.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.703,C:\Programming\Projects\GUI\Avk.GUI.CustomEditorForm.dfm=C:\Programming\Projects\_Core\uCustomEditor.dfm</Transaction>
+>>>>>>> a0d4e75149cb79f1a68598f02f6faf5f04f56519
     <Transaction>1899.12.30 00:00:00.000.703,C:\Programming\Projects\GUI\Avk.GUI.CustomEditorForm.pas=C:\Programming\Projects\_Core\uCustomEditor.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.578,C:\Programming\Projects\GUI\Src\uSearchFieldsSelect.dfm=C:\Programming\Projects\GUI\Src\Avk.Gui.SearchFieldsSelect.dfm</Transaction>
     <Transaction>1899.12.30 00:00:00.000.828,C:\Programming\Projects\GUI\Src\Avk.Gui.BaseForm.pas=C:\Programming\Projects\GUI\Src\Avk.GUI.BaseForm.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.015,C:\Programming\Projects\GUI\Src\Avk.GUI.BaseForm.pas=C:\Programming\Projects\_Core\uBaseForm.pas</Transaction>
+<<<<<<< HEAD
     <Transaction>1899.12.30 00:00:00.000.031,C:\Programming\Projects\GUI\Unit2.dfm=C:\Programming\Projects\GUI\Src\Avk.Gui.BlockFrame.dfm</Transaction>
     <Transaction>1899.12.30 00:00:00.000.593,C:\Programming\Projects\GUI\Src\Avk.Gui.CustomGuiObjectFrame.dfm=C:\Programming\Projects\GUI\Unit1.dfm</Transaction>
     <Transaction>1899.12.30 00:00:00.000.171,C:\Programming\Projects\GUI\Src\Avk.Gui.GridFrame.dfm=C:\Programming\Projects\GUI\Src\Avk.Gui.ProcedureFrame.dfm</Transaction>
@@ -37,5 +46,17 @@
     <Transaction>1899.12.30 00:00:00.000.297,C:\Projects\GUI\Src\Avk.Gui.Classes.pas=C:\Users\avk\Documents\RAD Studio\Projects\Unit2.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.656,C:\Programming\Projects\GUI\Src\Avk.Gui.ModalFrameForm.dfm=C:\Programming\Projects\GUI\Unit1.dfm</Transaction>
     <Transaction>1899.12.30 00:00:00.000.109,C:\Programming\Projects\GUI\Src\Avk.Gui.FormsMenuFrame.pas=C:\Programming\Projects\GUI\Unit1.pas</Transaction>
+=======
+    <Transaction>1899.12.30 00:00:00.000.171,C:\Programming\Projects\GUI\Src\Avk.Gui.CustomMainForm.dfm=C:\Programming\Projects\GUI\Unit2.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.593,C:\Programming\Projects\GUI\Src\Avk.Gui.CustomGuiObjectFrame.dfm=C:\Programming\Projects\GUI\Unit1.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.640,C:\Programming\Projects\GUI\Src\uGuiTestsMain.dfm=C:\Programming\Projects\GUI\Unit1.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.075,C:\Projects\GUI\Unit1.dfm=C:\Projects\GUI\Src\Avk.Gui.FormFrame.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.031,C:\Programming\Projects\GUI\Unit2.dfm=C:\Programming\Projects\GUI\Src\Avk.Gui.BlockFrame.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.656,C:\Programming\Projects\GUI\Src\Avk.Gui.ModalFrameForm.dfm=C:\Programming\Projects\GUI\Unit1.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.297,C:\Projects\GUI\Src\Avk.Gui.Classes.pas=C:\Users\avk\Documents\RAD Studio\Projects\Unit2.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.984,C:\Programming\Projects\GUI\Src\Avk.Gui.GlobalSettings.pas=C:\Programming\Projects\_Core\uGlobalSettings.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.109,C:\Programming\Projects\GUI\Src\Avk.Gui.FormsMenuFrame.pas=C:\Programming\Projects\GUI\Unit1.pas</Transaction>
+    <Transaction>2013.06.06 21:33:31.877,C:\Projects\GUI\Src\Avk.Gui.FirebirdConnect.pas=C:\Projects\GUI\Unit1.pas</Transaction>
+>>>>>>> a0d4e75149cb79f1a68598f02f6faf5f04f56519
   </Transactions>
 </BorlandProject>

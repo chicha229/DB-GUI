@@ -24,7 +24,11 @@ uses
   Avk.Gui.FormsMenuFrame in 'Src\Avk.Gui.FormsMenuFrame.pas' {FormsMenuFrame: TFrame},
   Avk.Core.Helpers in 'Src\Avk.Core.Helpers.pas',
   Avk.Gui.SearchFieldsSelect in 'Src\Avk.Gui.SearchFieldsSelect.pas' {SelectSearchFieldsForm},
-  TabOrder in '..\_Core\TabOrder.pas';
+  TabOrder in '..\_Core\TabOrder.pas',
+  Avk.Gui.Connection in 'Src\Avk.Gui.Connection.pas',
+  Avk.Gui.DirectConnect in 'Src\Avk.Gui.DirectConnect.pas',
+  Avk.Gui.OracleDirectConnect in 'Src\Avk.Gui.OracleDirectConnect.pas',
+  Avk.Gui.FirebirdDirectConnect in 'Src\Avk.Gui.FirebirdDirectConnect.pas';
 
 {$R *.res}
 

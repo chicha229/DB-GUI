@@ -842,6 +842,7 @@ begin
   end;
 
   // TODO: что еще хотел проверить?
+  // кол-во параметров типа cursor, и их соответствие IsDataset
 end;
 
 { TProcedureDescription }
