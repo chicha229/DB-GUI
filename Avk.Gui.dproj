@@ -157,6 +157,10 @@
             <Form>SelectSearchFieldsForm</Form>
         </DCCReference>
         <DCCReference Include="..\_Core\TabOrder.pas"/>
+        <DCCReference Include="Src\Avk.Gui.Connection.pas"/>
+        <DCCReference Include="Src\Avk.Gui.DirectConnect.pas"/>
+        <DCCReference Include="Src\Avk.Gui.OracleDirectConnect.pas"/>
+        <DCCReference Include="Src\Avk.Gui.FirebirdDirectConnect.pas"/>
         <None Include="WorkPlan.txt"/>
         <None Include="рефакторинг.txt"/>
         <None Include="Profiling\AQtimeModule1.aqt"/>
