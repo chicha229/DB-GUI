@@ -1260,4 +1260,10 @@ begin
   DestinationParam := ADestinationParam;
 end;
 
+initialization
+  ;
+
+finalization
+  FBlocksManager.Free;
+
 end.

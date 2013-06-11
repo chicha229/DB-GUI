@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Classes, uADGUIxIntf, uADStanIntf,
   uADStanOption, uADStanError, uADPhysIntf, uADStanDef, uADStanPool,
-  uADStanAsync, uADPhysManager, Data.DB, uADCompClient, uADPhysOracle,
+  uADStanAsync, uADPhysManager, Data.DB, uADCompClient,
   uADCompGUIx, uADGUIxFormsWait,
   Avk.Gui.Connection, Vcl.ImgList, Vcl.Controls, System.Generics.Collections,
   Avk.Gui.Descriptions, cxStyles, cxClasses, cxContainer, cxEdit;
@@ -55,6 +55,8 @@ type
     { Public declarations }
 
     function GetConnectionMode: string; virtual; abstract;
+    function GuiPackageName: string; virtual;
+
     property Connection: IConnection read GetConnection;
     property MainTransaction: ITransaction read GetMainTransaction;
     function GetRefInfo(ARefBlockName: string): TRefInfo;
@@ -141,6 +143,11 @@ begin
   end
   else
     Result := FCommonRefs[ARefBlockName];
+end;
+
+function TCustomMainDataModule.GuiPackageName: string;
+begin
+  Result := '';
 end;
 
 function TCustomMainDataModule.GetMainTransaction: ITransaction;

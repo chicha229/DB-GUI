@@ -66,6 +66,7 @@ begin
   inherited;
   FQuery := TADQuery.Create(nil);
   FQuery.Transaction := GetTransaction;
+  FQuery.Connection := GetTransaction.Connection;
 end;
 
 destructor TOracleDirectTransaction.Destroy;
@@ -100,7 +101,7 @@ begin
 
   QueryParams := '';
   for PD in AProcedure.SortedParams do
-    if PD.ParamDirection = pdIn then
+    if PD.ParamDirection in [pdIn, pdInOut, pdOut, pdCursor] then
     begin
       QueryParams := DelimitedConcat(
         QueryParams,

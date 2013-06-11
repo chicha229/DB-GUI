@@ -2,5 +2,7 @@
 <BorlandProject>
 	<Transactions>
     <Transaction>1899.12.30 00:00:00.000.806,C:\Projects\GUI\Src\Avk.Gui.DbDependend.pas=</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.078,=C:\Projects\FastMM4991\FastMM4.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.835,=C:\Projects\FastMM4991\FastMM4Messages.pas</Transaction>
   </Transactions>
 </BorlandProject>

@@ -31,7 +31,7 @@ implementation
 {$R *.dfm}
 
 uses
-  Avk.Gui.FirebirdDirectConnect;
+  Avk.Gui.FireBirdDirectConnect;
 
 procedure TTestsMainDataModule.DataModuleCreate(Sender: TObject);
 begin
@@ -41,7 +41,7 @@ end;
 
 function TTestsMainDataModule.GetConnectionMode: string;
 begin
-  Result := FirebirdConnectMode;
+  Result := FireBirdConnectMode;
 end;
 
 end.

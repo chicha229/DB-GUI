@@ -8,7 +8,8 @@ uses
   cxContainer, cxEdit, cxGroupBox, StdCtrls, cxButtons, ExtCtrls, cxStyles,
   cxCustomData, cxGraphics, cxFilter, cxData, cxDataStorage, cxCheckBox,
   cxGridCustomTableView, cxGridTableView, cxGridCustomView, cxClasses,
-  cxGridLevel, cxGrid, cxLookAndFeels, uFormErrors, Generics.Collections;
+  cxGridLevel, cxGrid, cxLookAndFeels, uFormErrors, Generics.Collections,
+  dxSkinsCore, dxSkinsDefaultPainters, dxSkinscxPCPainter;
 
 type
   TFieldDescription = class (TObject)

@@ -1,5 +1,6 @@
 inherited SelectSearchFieldsForm: TSelectSearchFieldsForm
   Caption = #1042#1099#1073#1077#1088#1080#1090#1077' '#1087#1086#1083#1103' '#1076#1083#1103' '#1087#1086#1080#1089#1082#1072
+  ExplicitWidth = 320
   PixelsPerInch = 96
   TextHeight = 13
   inherited BottomPanel: TPanel
@@ -17,6 +18,7 @@ inherited SelectSearchFieldsForm: TSelectSearchFieldsForm
         Align = alClient
         TabOrder = 0
         object FieldsGridTableView: TcxGridTableView
+          Navigator.Buttons.CustomButtons = <>
           DataController.Summary.DefaultGroupSummaryItems = <>
           DataController.Summary.FooterSummaryItems = <>
           DataController.Summary.SummaryGroups = <>

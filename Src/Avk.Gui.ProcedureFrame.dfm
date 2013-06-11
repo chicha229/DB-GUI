@@ -219,6 +219,9 @@ inherited ProcedureFrame: TProcedureFrame
     Top = 144
   end
   object MemTable: TADMemTable
+    AfterOpen = QueryAfterOpen
+    AfterPost = QueryAfterPost
+    AfterScroll = QueryAfterOpen
     FetchOptions.AssignedValues = [evMode]
     FetchOptions.Mode = fmAll
     ResourceOptions.AssignedValues = [rvSilentMode]

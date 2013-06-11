@@ -88,26 +88,23 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\FastMM4991\FastMM4.pas"/>
         <DCCReference Include="Src\Avk.Gui.Descriptions.pas"/>
         <DCCReference Include="Src\Avk.Gui.BaseFrame.pas">
             <Form>BaseFrame</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="Src\Avk.Gui.BlockFrame.pas">
             <Form>BlockFrame</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="Src\AVK.Core.Utils.pas"/>
         <DCCReference Include="Src\Avk.Gui.CustomMainDM.pas">
             <Form>CustomMainDataModule</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
         <DCCReference Include="Src\uGuiTestMainDM.pas">
             <Form>TestsMainDataModule</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
         <DCCReference Include="Src\Avk.Gui.ProcedureFrame.pas">
@@ -116,12 +113,10 @@
         </DCCReference>
         <DCCReference Include="Src\Avk.Gui.FormFrame.pas">
             <Form>FormFrame</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="Src\Avk.Gui.CustomMainForm.pas">
             <Form>CustomMainForm</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="Src\Avk.Gui.BaseForm.pas">
             <Form>BaseForm</Form>
@@ -131,7 +126,6 @@
         </DCCReference>
         <DCCReference Include="Src\Avk.Gui.ModalFrameForm.pas">
             <Form>FrameModalForm</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="Src\Avk.DX.PostEditors.pas"/>
         <DCCReference Include="Src\Avk.DX.LookupFilter.pas"/>
@@ -139,16 +133,13 @@
         <DCCReference Include="Src\Avk.Gui.GlobalSettings.pas"/>
         <DCCReference Include="Src\Avk.Gui.DescriptionsLoader.pas">
             <Form>DescriptionsLoaderDM</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
         <DCCReference Include="Src\uGuiTestsMain.pas">
             <Form>GuiTestMainForm</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="Src\Avk.Gui.FormsMenuFrame.pas">
             <Form>FormsMenuFrame</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="Src\Avk.Core.Helpers.pas"/>
@@ -159,7 +150,10 @@
         <DCCReference Include="Src\Avk.Gui.Connection.pas"/>
         <DCCReference Include="Src\Avk.Gui.DirectConnect.pas"/>
         <DCCReference Include="Src\Avk.Gui.OracleDirectConnect.pas"/>
-        <DCCReference Include="Src\Avk.Gui.FirebirdDirectConnect.pas"/>
+        <DCCReference Include="Src\Avk.Gui.FirebirdDirectConnect.pas">
+            <Form>$R *.res</Form>
+        </DCCReference>
+        <DCCReference Include="..\FastMM4991\FastMM4Messages.pas"/>
         <None Include="WorkPlan.txt"/>
         <None Include="рефакторинг.txt"/>
         <None Include="Profiling\AQtimeModule1.aqt"/>

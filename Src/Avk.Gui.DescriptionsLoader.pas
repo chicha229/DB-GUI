@@ -59,7 +59,8 @@ implementation
 
 uses
   System.Variants,
-  Avk.Gui.CustomMainDM, Avk.Core.Helpers;
+  Avk.Gui.OracleDirectConnect,
+  Avk.Core.Utils, Avk.Gui.CustomMainDM, Avk.Core.Helpers;
 
 const
   cParamDirectionNames: array[TParamDirection] of string = (
@@ -111,6 +112,8 @@ begin
     Result := ftString
   else if AName = 'boolean' then
     Result := ftBoolean
+  else if AName = 'cursor' then
+    Result := ftCursor
   else
     raise Exception.CreateFmt('Тип данных "%s" не найден', [AName]);
 end;
@@ -477,19 +480,25 @@ begin
     );
 end;
 
-
 procedure TDescriptionsLoaderDM.InternalExecute;
 
 procedure PrepareQueries;
+var
+  PackageName: string;
 
   procedure OpenProcedureQuery(AProcedureName: string; AData: TADMemTable);
   begin
-    // для оракла - в спец. пакете
-    FTempProcedureDescription.ProcedureName := AProcedureName;
+    FTempProcedureDescription.ProcedureName := DelimitedConcat(
+      PackageName,
+      AProcedureName,
+      '.'
+    );
     CustomMainDM.MainTransaction.QueryData(FTempProcedureDescription, nil, AData);
   end;
 
 begin
+  PackageName := CustomMainDM.GuiPackageName;
+
   OpenProcedureQuery('ui$cr_block', BlocksQuery);
   OpenProcedureQuery('ui$cr_procedure', ProceduresQuery);
   OpenProcedureQuery('ui$cr_block_param', BlockParamsQuery);
@@ -568,6 +577,7 @@ begin
   FLoadedBlockRefBinds := TObjectList<TBlockRefBind>.Create;
   FLoadedBlockRefBinds.OwnsObjects := false;
 
+  // чтобы был dataset-ом, нужен первичный ключ
   PD := TParamDescription.Create;
   PD.Name := 'ID';
   PD.IndexInKeyFields := 1;
@@ -575,6 +585,18 @@ begin
   PD.DataType := ftInteger;
   PD.OrderNum := 1;
   FTempProcedureDescription.Params.Add('ID', PD);
+
+  // для оракла - курсор в параметрах
+  if CustomMainDM.GetConnectionMode = OracleConnectMode then
+  begin
+    PD := TParamDescription.Create;
+    PD.Name := 'o_result';
+    PD.IndexInKeyFields := 1;
+    PD.ParamDirection := pdCursor;
+    PD.DataType := ftCursor;
+    PD.OrderNum := 1;
+    FTempProcedureDescription.Params.Add('o_result', PD);
+  end;
 end;
 
 procedure TDescriptionsLoaderDM.DataModuleDestroy(Sender: TObject);
