@@ -29,11 +29,13 @@ type
     procedure QueryData(
       const AProcedure: TProcedureDescription;
       const AParamValues: TParamValues;
-      const AData: TADMemTable
+      const AData: TADMemTable;
+      const ACacheData: boolean = false
     ); virtual;
     procedure ExecuteProcedure(
       const AProcedure: TProcedureDescription; const AParamValues: TParamValues
     ); virtual;
+    procedure SetCacheChanged(const Value: TCacheChanged);
   end;
 
   TDirectTransactionClass = class of TDirectTransaction;
@@ -267,8 +269,12 @@ begin
   Result := FTransaction;
 end;
 
-procedure TDirectTransaction.QueryData(const AProcedure: TProcedureDescription;
-  const AParamValues: TParamValues; const AData: TADMemTable);
+procedure TDirectTransaction.QueryData(
+  const AProcedure: TProcedureDescription;
+  const AParamValues: TParamValues;
+  const AData: TADMemTable;
+  const ACacheData: boolean
+);
 begin
   LogProcedureCall('open ' + AProcedure.Name, AProcedure, AParamValues);
 end;
@@ -281,6 +287,11 @@ end;
 procedure TDirectTransaction.RollbackRetaining;
 begin
   FTransaction.RollbackRetaining;
+end;
+
+procedure TDirectTransaction.SetCacheChanged(const Value: TCacheChanged);
+begin
+  ;
 end;
 
 initialization

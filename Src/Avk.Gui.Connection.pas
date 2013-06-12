@@ -13,6 +13,11 @@ uses
 }
 
 type
+  TCacheChanged = procedure (
+    const AProcedureName: string;
+    const AData: TADMemTable
+  ) of object;
+
   ITransaction = interface (IUnknown)
     ['{B6830EA5-6802-4983-A570-57930EEB234A}']
 
@@ -29,11 +34,14 @@ type
     procedure QueryData(
       const AProcedure: TProcedureDescription;
       const AParamValues: TParamValues;
-      const AData: TADMemTable
+      const AData: TADMemTable;
+      const ACacheData: boolean = false
     );
     procedure ExecuteProcedure(
       const AProcedure: TProcedureDescription; const AParamValues: TParamValues
     );
+
+    procedure SetCacheChanged(const Value: TCacheChanged);
   end;
 
   IConnection = interface (IUnknown)
@@ -108,5 +116,11 @@ begin
 
   ConnectionFactory.FImplementations.Add(AConnectMode, AImplementationClass);
 end;
+
+initialization
+  ;
+
+finalization
+  FConnectionFactory.Free;
 
 end.
