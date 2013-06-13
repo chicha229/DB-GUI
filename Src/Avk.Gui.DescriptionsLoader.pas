@@ -60,7 +60,7 @@ implementation
 uses
   System.Variants,
   Avk.Gui.OracleDirectConnect,
-  Avk.Core.Utils, Avk.Gui.CustomMainDM, Avk.Core.Helpers;
+  Avk.Core.Utils, Avk.Gui.CustomMainDM;
 
 const
   cParamDirectionNames: array[TParamDirection] of string = (

@@ -24,7 +24,8 @@ type
     procedure QueryData(
       const AProcedure: TProcedureDescription;
       const AParamValues: TParamValues;
-      const AData: TADMemTable
+      const AData: TADMemTable;
+      const ACacheData: boolean = false
     ); override;
     procedure ExecuteProcedure(
       const AProcedure: TProcedureDescription; const AParamValues: TParamValues
@@ -130,7 +131,9 @@ end;
 procedure TFirebirdDirectTransaction.QueryData(
   const AProcedure: TProcedureDescription;
   const AParamValues: TParamValues;
-  const AData: TADMemTable);
+  const AData: TADMemTable;
+  const ACacheData: boolean
+);
 begin
   inherited;
   Assert(AProcedure.IsDataSet);

@@ -1,7 +1,7 @@
 program Avk.Gui;
 
 uses
-  FastMM4 in '..\FastMM4991\FastMM4.pas',
+  FastMM4 in '..\FastMM\FastMM4.pas',
   Vcl.Forms,
   Avk.Gui.Descriptions in 'Src\Avk.Gui.Descriptions.pas',
   Avk.Gui.BaseFrame in 'Src\Avk.Gui.BaseFrame.pas' {BaseFrame: TFrame},
@@ -22,14 +22,13 @@ uses
   Avk.Gui.DescriptionsLoader in 'Src\Avk.Gui.DescriptionsLoader.pas' {DescriptionsLoaderDM: TDataModule},
   uGuiTestsMain in 'Src\uGuiTestsMain.pas' {GuiTestMainForm},
   Avk.Gui.FormsMenuFrame in 'Src\Avk.Gui.FormsMenuFrame.pas' {FormsMenuFrame: TFrame},
-  Avk.Core.Helpers in 'Src\Avk.Core.Helpers.pas',
   Avk.Gui.SearchFieldsSelect in 'Src\Avk.Gui.SearchFieldsSelect.pas' {SelectSearchFieldsForm},
   TabOrder in '..\_Core\TabOrder.pas',
   Avk.Gui.Connection in 'Src\Avk.Gui.Connection.pas',
   Avk.Gui.DirectConnect in 'Src\Avk.Gui.DirectConnect.pas',
   Avk.Gui.OracleDirectConnect in 'Src\Avk.Gui.OracleDirectConnect.pas',
-  Avk.Gui.FirebirdDirectConnect in 'Src\Avk.Gui.FirebirdDirectConnect.pas' {$R *.res},
-  FastMM4Messages in '..\FastMM4991\FastMM4Messages.pas';
+  Avk.Gui.FirebirdDirectConnect in 'Src\Avk.Gui.FirebirdDirectConnect.pas',
+  FastMM4Messages in '..\FastMM\FastMM4Messages.pas';
 
 {$R *.res}
 
