@@ -231,10 +231,16 @@ begin
         SourceFrame := FFrames[Param.SourceBlockId];
       if SourceFrame.IsOpened then
       begin
-        Frame.ParamValues.AddOrSetValue(
-          Param.Name,
-          SourceFrame.ParamValues[Param.SourceParamName]
-        );
+        if SourceFrame.ParamValues.ContainsKey(Param.SourceParamName) then
+          Frame.ParamValues.AddOrSetValue(
+            Param.Name,
+            SourceFrame.ParamValues[Param.SourceParamName]
+          )
+        else
+          Frame.ParamValues.AddOrSetValue(
+            Param.Name,
+            Null
+          );
         ParamFound := true;
       end;
     end;

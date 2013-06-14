@@ -25,6 +25,8 @@ type
     property GuiObjectsFrame: TBlockFrame read FGuiObjectsFrame;
     class function GetMainDMClass: TCustomMainDataModuleClass; virtual; abstract;
 
+    function ProjectName: string; virtual;
+
     function CreateBlockFrame(
       ABlock: TBlockDescription;
       ATransaction: ITransaction;
@@ -78,6 +80,11 @@ end;
 procedure TCustomMainForm.FormShow(Sender: TObject);
 begin
   WindowState := wsMaximized;
+end;
+
+function TCustomMainForm.ProjectName: string;
+begin
+  Result := '';
 end;
 
 function TCustomMainForm.CreateBlockFrame(

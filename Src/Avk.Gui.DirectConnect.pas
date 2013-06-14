@@ -11,20 +11,23 @@ type
   TDirectTransaction = class (TInterfacedObject, ITransaction)
   private
     FTransaction: TADTransaction;
+    FCmd: TADCommand;
   protected
     function GetTransaction: TADTransaction;
+    procedure LogTransactionAction(AAction: string);
+    procedure ExecSql(ASql: string);
   public
     constructor Create(AConnection: TADConnection); virtual;
     destructor Destroy; override;
 
-    procedure Commit;
-    procedure Rollback;
+    procedure Commit; virtual;
+    procedure Rollback; virtual;
 
-    procedure CommitRetaining;
-    procedure RollbackRetaining;
+    procedure CommitRetaining; virtual;
+    procedure RollbackRetaining; virtual;
 
-    procedure MakeSavepoint(const AName: string); virtual; abstract;
-    procedure RollbackToSavepoint(const AName: string); virtual; abstract;
+    procedure MakeSavepoint(const AName: string); virtual;
+    procedure RollbackToSavepoint(const AName: string); virtual;
 
     procedure QueryData(
       const AProcedure: TProcedureDescription;
@@ -50,6 +53,7 @@ type
 
     procedure BeforeConnect; virtual;
     procedure AfterConnect; virtual;
+
     function GetDirectTransactionClass: TDirectTransactionClass; virtual; abstract;
   public
     class function NewInstance: TObject; override;
@@ -182,6 +186,8 @@ begin
   Result := inherited NewInstance;
   C := TADConnection.Create(nil);
   C.TxOptions.AutoCommit := false;
+  C.TxOptions.AutoStart := false;
+  C.TxOptions.AutoStop := false;
 
   (Result as TDirectConnection).FConnection := C;
 end;
@@ -193,40 +199,43 @@ begin
 end;
 
 function TDirectConnection.StartTransaction: ITransaction;
-var
-  DT: TDirectTransaction;
-  T: TADTransaction;
 begin
   Assert(GetConnection.Connected);
-
-  DT := GetDirectTransactionClass.Create(GetConnection);
-  T := DT.GetTransaction;
-  T.Options.AutoCommit := false;
-
-  Result := DT;
+  Result := GetDirectTransactionClass.Create(GetConnection);
 end;
 
 { TDirectTransaction }
 
 procedure TDirectTransaction.Commit;
 begin
-  FTransaction.Commit;
+  LogTransactionAction('commit');
 end;
 
 procedure TDirectTransaction.CommitRetaining;
 begin
-  FTransaction.CommitRetaining;
+  LogTransactionAction('commit retaining');
 end;
 
 constructor TDirectTransaction.Create(AConnection: TADConnection);
 begin
   FTransaction := TADTransaction.Create(nil);
+  FTransaction.Options.AutoStop := false;
+  FTransaction.Options.AutoStart := false;
+  FTransaction.Options.AutoCommit := false;
   FTransaction.Connection := AConnection;
+
+  FCmd := TADCommand.Create(nil);
+  FCmd.Connection := AConnection;
+  FCmd.Transaction := FTransaction;
+
+  FTransaction.StartTransaction;
+  LogTransactionAction('transaction started');
 end;
 
 destructor TDirectTransaction.Destroy;
 begin
   FTransaction.Free;
+  FCmd.Free;
   inherited;
 end;
 
@@ -258,6 +267,12 @@ begin
   CodeSite.Send(Msg, GLogDetails);
 end;
 
+procedure TDirectTransaction.ExecSql(ASql: string);
+begin
+  FCmd.CommandText.Text := ASql;
+  FCmd.Execute();
+end;
+
 procedure TDirectTransaction.ExecuteProcedure(
   const AProcedure: TProcedureDescription; const AParamValues: TParamValues);
 begin
@@ -267,6 +282,16 @@ end;
 function TDirectTransaction.GetTransaction: TADTransaction;
 begin
   Result := FTransaction;
+end;
+
+procedure TDirectTransaction.LogTransactionAction(AAction: string);
+begin
+  CodeSite.Send(AAction, Integer(GetTransaction));
+end;
+
+procedure TDirectTransaction.MakeSavepoint(const AName: string);
+begin
+  LogTransactionAction('savepoint ' + AName);
 end;
 
 procedure TDirectTransaction.QueryData(
@@ -281,12 +306,17 @@ end;
 
 procedure TDirectTransaction.Rollback;
 begin
-  FTransaction.Rollback;
+  LogTransactionAction('rollback');
 end;
 
 procedure TDirectTransaction.RollbackRetaining;
 begin
-  FTransaction.RollbackRetaining;
+  CodeSite.Send('rollback retaining');
+end;
+
+procedure TDirectTransaction.RollbackToSavepoint(const AName: string);
+begin
+  LogTransactionAction('rollback to savepoint ' + AName);
 end;
 
 procedure TDirectTransaction.SetCacheChanged(const Value: TCacheChanged);

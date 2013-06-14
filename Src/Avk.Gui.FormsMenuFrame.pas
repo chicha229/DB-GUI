@@ -26,6 +26,7 @@ type
   public
     { Public declarations }
     procedure Build(AParent: TWinControl); override;
+
     procedure AfterRefresh; override;
   end;
 
@@ -47,6 +48,7 @@ end;
 
 procedure TFormsMenuFrame.Build(AParent: TWinControl);
 begin
+  ParamValues.AddOrSetValue('I_PROJECT', CustomMainForm.ProjectName);
   inherited Build(AParent);
   TopLabel.Hide;
 end;
