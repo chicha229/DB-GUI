@@ -79,10 +79,11 @@ implementation
 uses
   System.Classes, SysUtils, Variants,
   CodeSiteLogging,
-  uADStanParam;
+  uADStanParam, uADCompGUIx;
 
 var
   GLogDetails: TStringList;
+  GErrDialog: TADGuixErrorDialog;
 
 procedure FillQueryParams(
   AQuery: TADQuery;
@@ -295,9 +296,16 @@ begin
 end;
 
 initialization
+begin
   GLogDetails := TStringList.Create;
+  GErrDialog := TADGuixErrorDialog.Create(nil);
+  GErrDialog.Caption := 'Ошибка выполнения процедуры БД';
+end;
 
 finalization
+begin
   GLogDetails.Free;
+  GErrDialog.Free;
+end;
 
 end.
