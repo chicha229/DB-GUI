@@ -21,6 +21,12 @@ type
     procedure MakeSavepoint(const AName: string); override;
     procedure RollbackToSavepoint(const AName: string); override;
 
+    procedure Commit; override;
+    procedure Rollback; override;
+
+    procedure CommitRetaining; override;
+    procedure RollbackRetaining; override;
+
     procedure QueryData(
       const AProcedure: TProcedureDescription;
       const AParamValues: TParamValues;
@@ -62,6 +68,18 @@ end;
 
 { TFirebirdDirectTransaction }
 
+procedure TFirebirdDirectTransaction.Commit;
+begin
+  inherited;
+  GetTransaction.Commit;
+end;
+
+procedure TFirebirdDirectTransaction.CommitRetaining;
+begin
+  inherited;
+  GetTransaction.CommitRetaining;
+end;
+
 constructor TFirebirdDirectTransaction.Create;
 begin
   inherited;
@@ -88,7 +106,7 @@ end;
 procedure TFirebirdDirectTransaction.MakeSavepoint(const AName: string);
 begin
   inherited;
-  GetTransaction.Connection.ExecSQL('savepoint ' + AName);
+  ExecSQL('savepoint ' + AName);
 end;
 
 procedure TFirebirdDirectTransaction.PrepareQuery(
@@ -147,10 +165,22 @@ begin
   end;
 end;
 
+procedure TFirebirdDirectTransaction.Rollback;
+begin
+  inherited;
+  GetTransaction.Rollback;
+end;
+
+procedure TFirebirdDirectTransaction.RollbackRetaining;
+begin
+  inherited;
+  GetTransaction.RollbackRetaining
+end;
+
 procedure TFirebirdDirectTransaction.RollbackToSavepoint(const AName: string);
 begin
   inherited;
-  GetTransaction.Connection.ExecSQL('rollback to ' + AName);
+  ExecSQL('rollback to ' + AName);
 end;
 
 initialization

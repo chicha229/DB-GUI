@@ -216,13 +216,18 @@ begin
       C := GridTableView.Columns[i];
       C.HeaderAlignmentHorz := taCenter;
       C.Styles.Header := CustomMainDM.GridHeaderStyle;
-      P := ProcedureDescription.ParamByName(C.DataBinding.FieldName);
-      if P.DataType = ftBoolean then
+      if ProcedureDescription.Params.ContainsKey(C.DataBinding.FieldName) then
       begin
-        C.PropertiesClass := TcxCheckBoxProperties;
-        (C.Properties as TcxCheckBoxProperties).ValueChecked := 1;
-        (C.Properties as TcxCheckBoxProperties).ValueUnChecked := 0;
-      end;
+        P := ProcedureDescription.ParamByName(C.DataBinding.FieldName);
+        if P.DataType = ftBoolean then
+        begin
+          C.PropertiesClass := TcxCheckBoxProperties;
+          (C.Properties as TcxCheckBoxProperties).ValueChecked := 1;
+          (C.Properties as TcxCheckBoxProperties).ValueUnChecked := 0;
+        end;
+      end
+      else
+        C.Visible := false;
     end;
     GridTableView.ApplyBestFit();
     Grid.BringToFront;
@@ -321,10 +326,10 @@ begin
     Result := FRecordsModified
   else
   begin
+    // для удаления - должно быть всегда true!
     EditorsToParamValues;
-    Result := FParamsModified;
+    Result := FParamsModified or ProcedureDescription.ForceSave;
   end;
-
 end;
 
 procedure TProcedureFrame.ApplySummaryRow;

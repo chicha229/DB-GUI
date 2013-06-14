@@ -328,6 +328,8 @@ begin
   for RefID in B.BlockRefs.Keys do
     if FLoadedParamRefs.IndexOf(B.BlockRefs[RefID]) = -1 then
       B.BlockRefs.Remove(RefId);
+
+  B.ClearCaches;
 end;
 
 procedure TDescriptionsLoaderDM.LoadProcedure(AID: string; ADescription: TProcedureDescription);
@@ -339,6 +341,8 @@ begin
     raise Exception.CreateFmt('Описание процедуры не найдено: %s', [ProcedureName]);
   FillBlockDescription(ADescription);
   ADescription.ProcedureName := ProceduresQuery.FieldByName('procedure_name').AsString;
+  ADescription.ProcedureOwner := ProceduresQuery.FieldByName('procedure_owner').AsString;
+  ADescription.ForceSave := ProceduresQuery.FieldByName('force_save').AsInteger <> 0;
 end;
 
 procedure TDescriptionsLoaderDM.LoadForm(AID: string; ADescription: TFormDescription);

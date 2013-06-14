@@ -21,6 +21,11 @@ type
     procedure MakeSavepoint(const AName: string); override;
     procedure RollbackToSavepoint(const AName: string); override;
 
+    procedure Commit; override;
+    procedure Rollback; override;
+    procedure CommitRetaining; override;
+    procedure RollbackRetaining; override;
+
     procedure QueryData(
       const AProcedure: TProcedureDescription;
       const AParamValues: TParamValues;
@@ -62,6 +67,18 @@ end;
 
 { TOracleDirectTransaction }
 
+procedure TOracleDirectTransaction.Commit;
+begin
+  inherited;
+  ExecSQL('commit');
+end;
+
+procedure TOracleDirectTransaction.CommitRetaining;
+begin
+  inherited;
+  ExecSQL('commit');
+end;
+
 constructor TOracleDirectTransaction.Create;
 begin
   inherited;
@@ -88,7 +105,7 @@ end;
 procedure TOracleDirectTransaction.MakeSavepoint(const AName: string);
 begin
   inherited;
-  GetTransaction.Connection.ExecSQL('savepoint ' + AName);
+  ExecSQL('savepoint ' + AName);
 end;
 
 procedure TOracleDirectTransaction.PrepareQuery(
@@ -98,7 +115,13 @@ var
   QueryParams: string;
   PD: TParamDescription;
 begin
-  QueryText := 'begin ' + AProcedure.ProcedureName;
+  QueryText :=
+    'begin ' +
+    DelimitedConcat(
+      AProcedure.ProcedureOwner,
+      AProcedure.ProcedureName,
+      '.'
+    );
 
   QueryParams := '';
   for PD in AProcedure.SortedParams do
@@ -132,17 +155,29 @@ begin
   PrepareQuery(AProcedure, AParamValues);
   FQuery.Open;
   try
-    AData.CloneCursor(FQuery, true);
+    AData.CloneCursor(FQuery);
     FillDataSetFields(AData, AProcedure);
   finally
     FQuery.Close;
   end;
 end;
 
+procedure TOracleDirectTransaction.Rollback;
+begin
+  inherited;
+  ExecSQL('rollback');
+end;
+
+procedure TOracleDirectTransaction.RollbackRetaining;
+begin
+  inherited;
+  ExecSQL('rollback');
+end;
+
 procedure TOracleDirectTransaction.RollbackToSavepoint(const AName: string);
 begin
   inherited;
-  GetTransaction.Connection.ExecSQL('rollback to ' + AName);
+  ExecSQL('rollback to ' + AName);
 end;
 
 initialization

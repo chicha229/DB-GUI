@@ -88,7 +88,7 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="..\FastMM\FastMM4.pas"/>
+        <DCCReference Include="..\FastMM4\FastMM4.pas"/>
         <DCCReference Include="Src\Avk.Gui.Descriptions.pas"/>
         <DCCReference Include="Src\Avk.Gui.BaseFrame.pas">
             <Form>BaseFrame</Form>
@@ -152,7 +152,7 @@
         <DCCReference Include="Src\Avk.Gui.FirebirdDirectConnect.pas">
             <Form>$R *.res</Form>
         </DCCReference>
-        <DCCReference Include="..\FastMM\FastMM4Messages.pas"/>
+        <DCCReference Include="..\FastMM4\FastMM4Messages.pas"/>
         <None Include="WorkPlan.txt"/>
         <None Include="рефакторинг.txt"/>
         <None Include="Profiling\AQtimeModule1.aqt"/>

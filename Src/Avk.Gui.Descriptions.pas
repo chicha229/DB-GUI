@@ -33,6 +33,8 @@ type
     FIndexInNameFields: integer;
     FAutoRefresh: boolean;
     FOrderNum: integer;
+    FCallOrderNum: integer;
+
     procedure SetDataType(const Value: TFieldType);
     procedure SetDisplayLabel(const Value: string);
     procedure SetEnablerParamName(const Value: string);
@@ -49,6 +51,7 @@ type
     procedure SetIndexInNameFields(const Value: integer);
     procedure SetAutoRefresh(const Value: boolean);
     procedure SetOrderNum(const Value: integer);
+    procedure SetCallOrderNum(const Value: integer);
   public
     property Name: string read FName write SetName;
     property DisplayLabel: string read FDisplayLabel write SetDisplayLabel;
@@ -62,7 +65,7 @@ type
     property IndexInNameFields: integer read FIndexInNameFields write SetIndexInNameFields;
     property AutoRefresh: boolean read FAutoRefresh write SetAutoRefresh;
     property OrderNum: integer read FOrderNum write SetOrderNum;
-    property CallOrderNum: integer read FOrderNum write SetOrderNum;
+    property CallOrderNum: integer read FCallOrderNum write SetCallOrderNum;
 
     // для связей мастер-деталь внутри формы
     // и привязки параметров формы к параметрам ее блоков
@@ -259,6 +262,7 @@ type
     property SortedActions: TArray<TBlockAction> read GetSortedActions;
 
     procedure Validate;
+    procedure ClearCaches;
   end;
 
   TBlocksManager = class (TObject)
@@ -276,16 +280,22 @@ type
   private
     FProcedureName: string;
     FParamsToGridDirection: TDrawDirection;
+    FProcedureOwner: string;
+    FForceSave: boolean;
 
     procedure SetParamsToGridDirection(const Value: TDrawDirection);
     procedure SetProcedureName(const Value: string);
+    procedure SetProcedureOwner(const Value: string);
+    procedure SetForceSave(const Value: boolean);
   protected
     procedure ValidateInternal; override;
   public
 
     property ProcedureName: string read FProcedureName write SetProcedureName;
+    property ProcedureOwner: string read FProcedureOwner write SetProcedureOwner;
 
     property ParamsToGridDirection: TDrawDirection read FParamsToGridDirection write SetParamsToGridDirection;
+    property ForceSave: boolean read FForceSave write SetForceSave;
   end;
 
   // панель как группировка блоков
@@ -370,6 +380,11 @@ end;
 procedure TParamDescription.SetAutoRefresh(const Value: boolean);
 begin
   FAutoRefresh := Value;
+end;
+
+procedure TParamDescription.SetCallOrderNum(const Value: integer);
+begin
+  FCallOrderNum := Value;
 end;
 
 procedure TParamDescription.SetDataType(const Value: TFieldType);
@@ -476,6 +491,16 @@ procedure TBlockDescription.AddValidationErrorFmt(AErrorTextFmt: string;
   AArgs: array of const);
 begin
   AddValidationError(Format(AErrorTextFmt, AArgs));
+end;
+
+procedure TBlockDescription.ClearCaches;
+begin
+  SetLength(FSortedActions, 0);
+  SetLength(FSortedParams, 0);
+  SetLength(FCallSortedParams, 0);
+  FKeyFieldNames := '';
+  FNameFieldNames := '';
+  FParentFieldNames := '';
 end;
 
 constructor TBlockDescription.Create;
@@ -726,8 +751,10 @@ begin
     for P in SortedParams do
     begin
       if (P.FParamDirection in [pdIn, pdOut,  pdInOut]) then
-        if (P.Group <> P.Group) and (S.IndexOf(P.Group) <> -1) then
+        if (P.Group <> LastGroup) and (S.IndexOf(P.Group) <> -1) then
           AddValidationErrorFmt('Группа %s встречается дважды не рядом в параметрах', [P.Group]);
+      if P.Group <> '' then
+        S.Add(P.Group);
       LastGroup := P.Group;
     end;
 
@@ -736,8 +763,10 @@ begin
     for P in SortedParams do
     begin
       if (P.FParamDirection in [pdField]) then
-        if (P.Group <> P.Group) and (S.IndexOf(P.Group) <> -1) then
+        if (P.Group <> LastGroup) and (S.IndexOf(P.Group) <> -1) then
           AddValidationErrorFmt('Группа %s встречается дважды не рядом в параметрах', [P.Group]);
+      if P.Group <> '' then
+        S.Add(P.Group);
       LastGroup := P.Group;
     end;
   finally
@@ -846,6 +875,11 @@ end;
 
 { TProcedureDescription }
 
+procedure TProcedureDescription.SetForceSave(const Value: boolean);
+begin
+  FForceSave := Value;
+end;
+
 procedure TProcedureDescription.SetParamsToGridDirection(
   const Value: TDrawDirection);
 begin
@@ -855,6 +889,11 @@ end;
 procedure TProcedureDescription.SetProcedureName(const Value: string);
 begin
   FProcedureName := Value;
+end;
+
+procedure TProcedureDescription.SetProcedureOwner(const Value: string);
+begin
+  FProcedureOwner := Value;
 end;
 
 procedure TProcedureDescription.ValidateInternal;
@@ -1247,7 +1286,7 @@ end;
 function TParamsCallComparer.Compare(const Left,
   Right: TParamDescription): Integer;
 begin
-  Result := Sign(Left.CallOrderNum - Right.CallOrderNum);
+  Result := Sign(Left.FCallOrderNum - Right.FCallOrderNum);
 end;
 
 { TBlockRefBind }

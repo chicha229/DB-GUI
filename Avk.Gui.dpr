@@ -1,7 +1,7 @@
 program Avk.Gui;
 
 uses
-  FastMM4 in '..\FastMM\FastMM4.pas',
+  FastMM4 in '..\FastMM4\FastMM4.pas',
   Vcl.Forms,
   Avk.Gui.Descriptions in 'Src\Avk.Gui.Descriptions.pas',
   Avk.Gui.BaseFrame in 'Src\Avk.Gui.BaseFrame.pas' {BaseFrame: TFrame},
@@ -28,7 +28,7 @@ uses
   Avk.Gui.DirectConnect in 'Src\Avk.Gui.DirectConnect.pas',
   Avk.Gui.OracleDirectConnect in 'Src\Avk.Gui.OracleDirectConnect.pas',
   Avk.Gui.FirebirdDirectConnect in 'Src\Avk.Gui.FirebirdDirectConnect.pas',
-  FastMM4Messages in '..\FastMM\FastMM4Messages.pas';
+  FastMM4Messages in '..\FastMM4\FastMM4Messages.pas';
 
 {$R *.res}
 
