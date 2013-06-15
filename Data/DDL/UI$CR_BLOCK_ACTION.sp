@@ -7,18 +7,19 @@ RETURNS (
     ACTION_STYLE D_IDENT,
     IMAGE_INDEX INTEGER,
     REFRESH_MODE D_IDENT,
-    ORDER_NUM SMALLINT)
+    ORDER_NUM SMALLINT,
+    SHORTCUT D_NAME)
 AS
 begin
   for
     select
       a.id, a."BLOCK", a.caption, a.links_to, a.action_style, a.image_index,
-      a.refresh_mode, a.order_num
+      a.refresh_mode, a.order_num, a.shortcut
     from ui$block_action a
     order by a."BLOCK", a.order_num
     into
       :id, :"BLOCK", :caption, :links_to, :action_style, :image_index,
-      :refresh_mode, :order_num
+      :refresh_mode, :order_num, :shortcut
   do
     suspend;
 end

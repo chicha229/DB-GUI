@@ -7,12 +7,13 @@ uses
   uADStanIntf, uADStanOption, uADStanError, uADPhysIntf,
   uADStanDef, uADStanPool, uADStanAsync, uADPhysManager, uADPhysOracle, Data.DB,
   uADCompClient, uADCompGUIx, uADGUIxFormsWait, uADPhysIB, Vcl.ImgList,
-  Vcl.Controls, cxStyles, cxClasses, cxContainer, cxEdit;
+  Vcl.Controls, cxStyles, cxClasses, cxContainer, cxEdit, uADGUIxFormsfError;
 
 type
   TTestsMainDataModule = class (TCustomMainDataModule)
     ADPhysOracleDriverLink1: TADPhysOracleDriverLink;
     ADPhysIBDriverLink1: TADPhysIBDriverLink;
+    ADGUIxErrorDialog1: TADGUIxErrorDialog;
     procedure DataModuleCreate(Sender: TObject);
   private
     { Private declarations }

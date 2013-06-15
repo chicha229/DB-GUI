@@ -69,6 +69,7 @@ type
     procedure ApplySummaryRow;
     procedure SaveSearchFields;
     procedure ApplySearchVisible;
+    function RefreshOneRecord(PV: TParamValues): boolean;
   public
     SearchFields: string;
 
@@ -81,6 +82,7 @@ type
     function Open: boolean; override;
     function Save: boolean; override;
     function Modified: boolean; override;
+    function ConfirmCancel: boolean; override;
 
     procedure SetButtonProperties(AButton: TdxBarItem); override;
     function CallDblClickActionInternal: boolean; override;
@@ -103,6 +105,7 @@ implementation
 
 uses
   Generics.Collections,
+  JclSysUtils,
   Avk.Gui.CustomMainDM, Avk.Gui.SearchFieldsSelect,
   AVK.Core.Utils, AVK.DX.LookupFilter;
 
@@ -368,20 +371,79 @@ begin
   end;
 end;
 
+function TProcedureFrame.RefreshOneRecord(PV: TParamValues): boolean;
+var
+  G: IMultiSafeGuard;
+  R: TADMemTable;
+  I: Integer;
+  PV2: TParamValues;
+  P: TParamDescription;
+begin
+  R := TADMemTable.Create(nil);
+  Guard(R, G);
+  PV2 := TParamValues.Create;
+  Guard(PV2, G);
+  Result := false;
+  for P in ProcedureDescription.Params.Values do
+    // TODO: хардкод!
+    if (P.IndexInKeyFields <> 0) and (PV.ContainsKey('O_' + P.Name)) then
+    begin
+      PV2.AddOrSetValue('I_' + P.Name, PV['O_' + P.Name]);
+      Result := true;
+    end;
+  if not Result then
+    Exit;
+
+  Transaction.QueryData(ProcedureDescription, PV2, R);
+  MemTable.DisableControls;
+  try
+    MemTable.Edit;
+    for I := 0 to MemTable.Fields.Count - 1 do
+      MemTable.Fields[i].Value := R.Fields[i].Value;
+    MemTable.Post;
+  finally
+    MemTable.EnableControls;
+  end;
+
+  CustomMainDM.OnRefreshProcedure(ProcedureDescription.Name);
+  AfterRefresh;
+end;
+
 procedure TProcedureFrame.OnAfterAction(A: TBlockAction; PV: TParamValues);
+var
+  G: IMultiSafeGuard;
+  P: TParamDescription;
+  UpdateKeyValues: TParamValues;
 begin
   inherited;
   case A.RefreshMode of
-    rmInsert,
-    rmUpdate,
-    rmDelete,
-    rmFull:
+    rmDelete:
       begin
-        RefreshData;
-        FRecordsModified := true;
+        MemTable.Delete;
+        AfterRefresh;
       end;
+    rmInsert:
+      begin
+        MemTable.Insert;
+        if not RefreshOneRecord(PV) then
+          RefreshData;
+      end;
+    rmUpdate:
+      begin
+        UpdateKeyValues := TParamValues.Create;
+        Guard(UpdateKeyValues, G);
+        for P in ProcedureDescription.Params.Values do
+          if (P.IndexInKeyFields <> 0) then
+            UpdateKeyValues.AddOrSetValue('O_' + P.Name, MemTable[P.Name]);
+        if not RefreshOneRecord(UpdateKeyValues) then
+          RefreshData;
+      end;
+    rmFull:
+      RefreshData;
     rmNone: ;
   end;
+  if A.RefreshMode <> rmNone then
+    FRecordsModified := true;
 end;
 
 procedure TProcedureFrame.OnChangeParamValues(Sender: TBlockFrame;
@@ -727,6 +789,11 @@ begin
     CallAction(InsertAction)
   else if (UpdateActionsCount = 1) and (not MemTable.IsEmpty) then
     CallAction(UpdateAction);
+end;
+
+function TProcedureFrame.ConfirmCancel: boolean;
+begin
+  Result := not ProcedureDescription.ForceSave;
 end;
 
 end.

@@ -96,11 +96,32 @@ end;
 
 procedure TFirebirdDirectTransaction.ExecuteProcedure(
   const AProcedure: TProcedureDescription; const AParamValues: TParamValues);
+var
+  P: TParamDescription;
+  OutParamExists: boolean;
 begin
   inherited;
   Assert(not AProcedure.IsDataSet);
   PrepareQuery(AProcedure, AParamValues);
-  FQuery.Execute();
+
+  OutParamExists := false;
+  for P in AProcedure.Params.Values do
+    if P.ParamDirection = pdOut then
+    begin
+      OutParamExists := true;
+      Break;
+    end;
+
+  if OutParamExists then
+    FQuery.Open
+  else
+    FQuery.Execute;
+
+  FillParamsFromQuery(FQuery, AProcedure, AParamValues);
+
+  for P in AProcedure.Params.Values do
+    if P.ParamDirection = pdOut then
+      AParamValues.AddOrSetValue(P.Name, FQuery[P.Name]);
 end;
 
 procedure TFirebirdDirectTransaction.MakeSavepoint(const AName: string);
@@ -137,9 +158,7 @@ begin
         'У процедур в Firebird не должно быть параметра типа курсор'
       );
   end;
-  if QueryParams = '' then
-    QueryText := QueryText + QueryParams
-  else
+  if QueryParams <> '' then
     QueryText := QueryText + '(' + QueryParams + ')';
 
   FQuery.SQL.Text := QueryText;

@@ -73,6 +73,12 @@ procedure FillQueryParams(
   AParamValues: TParamValues
 );
 
+procedure FillParamsFromQuery(
+  AQuery: TADQuery;
+  AProcedure: TProcedureDescription;
+  AParamValues: TParamValues
+);
+
 procedure FillDataSetFields(
   ADataSet: TDataSet;
   AProcedureDescription: TProcedureDescription
@@ -83,11 +89,10 @@ implementation
 uses
   System.Classes, SysUtils, Variants,
   CodeSiteLogging,
-  uADStanParam, uADCompGUIx;
+  uADStanParam;
 
 var
   GLogDetails: TStringList;
-  GErrDialog: TADGuixErrorDialog;
 
 procedure FillQueryParams(
   AQuery: TADQuery;
@@ -102,7 +107,9 @@ begin
   for PD in AProcedure.Params.Values do
     if PD.ParamDirection <> pdField then
     begin
-      P := AQuery.ParamByName(PD.Name);
+      P := AQuery.FindParam(PD.Name);
+      if not Assigned(P) then
+        Continue;      
       if PD.DataType = ftBoolean then
         P.DataType := ftSmallint
       else
@@ -116,6 +123,22 @@ begin
       if Assigned(AParamValues) and AParamValues.ContainsKey(PD.Name) then
         AQuery.ParamByName(PD.Name).Value := AParamValues[PD.Name];
     end;
+end;
+
+procedure FillParamsFromQuery(
+  AQuery: TADQuery;
+  AProcedure: TProcedureDescription;
+  AParamValues: TParamValues
+);
+var
+  P: TParamDescription;
+begin
+  for P in AProcedure.Params.Values do
+    if
+      (P.ParamDirection in [pdInOut, pdOut]) and
+      Assigned(AQuery.FindParam(P.Name))
+    then
+      AParamValues.AddOrSetValue(P.Name, AQuery.ParamByName(P.Name).Value);
 end;
 
 procedure FillDataSetFields(
@@ -328,14 +351,11 @@ end;
 initialization
 begin
   GLogDetails := TStringList.Create;
-  GErrDialog := TADGuixErrorDialog.Create(nil);
-  GErrDialog.Caption := 'Ошибка выполнения процедуры БД';
 end;
 
 finalization
 begin
   GLogDetails.Free;
-  GErrDialog.Free;
 end;
 
 end.

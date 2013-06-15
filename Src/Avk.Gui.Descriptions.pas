@@ -137,6 +137,7 @@ type
     FImageIndex: integer;
     FName: string;
     FOrderNum: integer;
+    FShortCut: TShortCut;
     procedure SetLinksToName(const Value: string);
     procedure SetActionStyle(const Value: TBlockActionStyle);
     procedure SetCaption(const Value: string);
@@ -145,6 +146,7 @@ type
     procedure SetImageIndex(const Value: integer);
     procedure SetName(const Value: string);
     procedure SetOrderNum(const Value: integer);
+    procedure SetShortCut(const Value: TShortCut);
   public
     constructor Create;
     destructor Destroy; override;
@@ -160,6 +162,7 @@ type
     property LinksTo: TBlockDescription read GetLinksTo;
     property ParamBinds: TDictionary<string, string> read FParamBinds;
     property ImageIndex: integer read FImageIndex write SetImageIndex;
+    property ShortCut: TShortCut read FShortCut write SetShortCut;
   end;
 
   TActionsComparer = class (TComparer<TBlockAction>)
@@ -367,6 +370,30 @@ uses
 
 var
   FBlocksManager: TBlocksManager;
+  FActionsComparer: TActionsComparer;
+  FParamsComparer: TParamsComparer;
+  FParamsCallComparer: TParamsCallComparer;
+
+function ActionsComparer: TActionsComparer;
+begin
+  if not Assigned(FActionsComparer) then
+    FActionsComparer := TActionsComparer.Create;
+  Result := FActionsComparer;
+end;
+
+function ParamsComparer: TParamsComparer;
+begin
+  if not Assigned(FParamsComparer) then
+    FParamsComparer := TParamsComparer.Create;
+  Result := FParamsComparer;
+end;
+
+function ParamsCallComparer: TParamsCallComparer;
+begin
+  if not Assigned(FParamsCallComparer) then
+    FParamsCallComparer := TParamsCallComparer.Create;
+  Result := FParamsCallComparer;
+end;
 
 function BlocksManager: TBlocksManager;
 begin
@@ -614,7 +641,7 @@ begin
   if (Length(FSortedActions) = 0) and (FActions.Count > 0) then
   begin
     FSortedActions := FActions.Values.ToArray;
-    TArray.Sort<TBlockAction>(FSortedActions, TActionsComparer.Create);
+    TArray.Sort<TBlockAction>(FSortedActions, ActionsComparer);
   end;
   Result := FSortedActions;
 end;
@@ -624,7 +651,7 @@ begin
   if (Length(FSortedParams) = 0) and (Params.Count > 0) then
   begin
     FSortedParams := Params.Values.ToArray;
-    TArray.Sort<TParamDescription>(FSortedParams, TParamsComparer.Create);
+    TArray.Sort<TParamDescription>(FSortedParams, ParamsComparer);
   end;
   Result := FSortedParams;
 end;
@@ -634,7 +661,7 @@ begin
   if (Length(FCallSortedParams) = 0) and (Params.Count > 0) then
   begin
     FCallSortedParams := Params.Values.ToArray;
-    TArray.Sort<TParamDescription>(FCallSortedParams, TParamsCallComparer.Create);
+    TArray.Sort<TParamDescription>(FCallSortedParams, ParamsCallComparer);
   end;
   Result := FCallSortedParams;
 end;
@@ -868,9 +895,6 @@ begin
             );
         end;
   end;
-
-  // TODO: что еще хотел проверить?
-  // кол-во параметров типа cursor, и их соответствие IsDataset
 end;
 
 { TProcedureDescription }
@@ -1178,6 +1202,11 @@ begin
   FRefreshMode := Value;
 end;
 
+procedure TBlockAction.SetShortCut(const Value: TShortCut);
+begin
+  FShortCut := Value;
+end;
+
 procedure TBlockAction.SetLinksToName(const Value: string);
 begin
   FLinksToName := Value;
@@ -1303,6 +1332,11 @@ initialization
   ;
 
 finalization
+begin
   FBlocksManager.Free;
+  FActionsComparer.Free;
+  FParamsComparer.Free;
+  FParamsCallComparer.Free;
+end;
 
 end.

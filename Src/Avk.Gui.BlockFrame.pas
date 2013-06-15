@@ -111,6 +111,7 @@ type
 
     function Modified: boolean; virtual;
     procedure DropChanges; virtual;
+    function ConfirmCancel: boolean; virtual;
 
     function CreateParamEditor(
       P: TParamDescription;
@@ -141,7 +142,7 @@ implementation
 {$R *.dfm}
 
 uses
-  Data.DB, UITypes, Vcl.Menus,
+  Data.DB, UITypes, Vcl.Menus, Math,
   cxSpinEdit, cxCheckBox, cxCalc, cxCurrencyEdit, cxCalendar, cxTimeEdit,
   cxBlobEdit, cxMemo, cxImage,
   cxDBLookupComboBox, uADCompClient,
@@ -286,7 +287,7 @@ begin
       (P.EnablerParamName = EditingParam.Name) and
       (not VarIsNull(E.EditingValue))
     then
-      ParamControls.Items[P.Name].FEditorControl.Enabled := E.EditValue;
+      ParamControls[P.Name].FEditorControl.Enabled := E.EditValue;
 
   ChangeId := BeginParamChanging;
   try
@@ -383,14 +384,24 @@ begin
     if C.BoundsRect.Bottom > MaxPoint.Y then
       MaxPoint.Y := C.BoundsRect.Bottom;
   end;
+  B.Constraints.MinHeight := MaxPoint.Y + 24;
+  B.Constraints.MinWidth := MaxPoint.X + 8;
+
+{
   B.Height := MaxPoint.Y + 24;
   B.Width := MaxPoint.X + 8;
   B.Constraints.MinHeight := B.Height;
   B.Constraints.MinWidth := B.Width;
+}
   case BlockDescription.ParamGroupsDrawDirection of
     ddHorizontal: Inc(GroupDrawPoint.X, B.Width + 8);
     ddVertical: Inc(GroupDrawPoint.Y, B.Height + 24);
   end;
+end;
+
+function TBlockFrame.ConfirmCancel: boolean;
+begin
+  Result := true;
 end;
 
 procedure TBlockFrame.CreateParamsGroup(AGroup: string);
@@ -621,6 +632,8 @@ begin
         ParamControls.Add(P.Name, CreateParamEditor(P));
     end;
   CloseParamsGroup(LastParamGroup);
+  Constraints.MinWidth := Max(EditorDrawPoint.X + 8, Constraints.MinWidth);
+  Constraints.MinHeight := Max(EditorDrawPoint.Y + 40, Constraints.MinHeight);
   FillFormErrors;
   ParamsScrollBox.Visible := ParamsScrollBox.ControlCount <> 0;
 end;
@@ -855,6 +868,7 @@ begin
       B.OnClick := OnActionClick;
       B.Tag := Integer(A);
       B.ImageIndex := A.ImageIndex;
+      B.ShortCut := A.ShortCut;
       ActionsBarSubItem.ItemLinks.Insert(ButtonIndex).Item := B;
       BarManagerToolBar.ItemLinks.Insert(ButtonIndex).Item := B;
       Inc(ButtonIndex);
@@ -907,7 +921,7 @@ var
 begin
   AValues.Clear;
   for ParamName in ParamValues.Keys do
-    if BlockDescription.ParamByName(ParamName).ParamDirection in [pdIn, pdInOut] then
+    if BlockDescription.ParamByName(ParamName).ParamDirection in [pdOut, pdInOut] then
       AValues.AddOrSetValue(ParamName, ParamValues[ParamName]);
 end;
 

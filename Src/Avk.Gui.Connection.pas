@@ -96,7 +96,7 @@ class function TConnectionFactory.CreateConnection(
   const AConnectMode: string): IConnection;
 begin
   Supports(
-    ConnectionFactory.FImplementations.Items[AConnectMode].Create,
+    ConnectionFactory.FImplementations[AConnectMode].Create,
     IConnection,
     Result
   );

@@ -35,6 +35,7 @@ type
     function Open: boolean; override;
     function Save: boolean; override;
     function Modified: boolean; override;
+    function ConfirmCancel: boolean; override;
     procedure DropChanges; override;
 
     procedure OnChangeParamValues(Sender: TBlockFrame; AChangeId: Int64); override;
@@ -57,6 +58,16 @@ type
   public
     function Compare(const Left, Right: T): Integer; override;
   end;
+
+var
+  FIndexOnParentComparer: TIndexOnParentComparer<TObject>;
+
+function IndexOnParentComparer: TIndexOnParentComparer<TObject>;
+begin
+  if not Assigned(FIndexOnParentComparer) then
+    FIndexOnParentComparer := TIndexOnParentComparer<TObject>.Create;
+  Result := FIndexOnParentComparer;
+end;
 
 { TFormFrame }
 
@@ -93,7 +104,7 @@ begin
       L.Add(B);
     for B in APanel.ChildPanels do
       L.Add(B);
-    L.Sort(TIndexOnParentComparer<TObject>.Create);
+    L.Sort(IndexOnParentComparer);
 
     X := 0;
     Y := 0;
@@ -385,7 +396,6 @@ function TFormFrame.Open: boolean;
   var
     OpenedCount, LoopCounter: integer;
     Frame: TBlockFrame;
-    FrameOpened: boolean;
     AllParamsBinded: boolean;
   begin
     for Frame in FFrames.Values do
@@ -403,16 +413,9 @@ function TFormFrame.Open: boolean;
           BindFrameParamsFromSource(Frame, AllParamsBinded);
           if AllParamsBinded then
           begin
-            try
-              FrameOpened := Frame.Open;
-            except
-              FrameOpened := false;
-            end;
-            if FrameOpened then
-            begin
-              Frame.IsOpened := true;
-              Inc(OpenedCount);
-            end;
+            Frame.Open;
+            Frame.IsOpened := true;
+            Inc(OpenedCount);
           end;
         end;
       Inc(LoopCounter);
@@ -471,6 +474,20 @@ end;
 function TFormFrame.Save: boolean;
 var
   F: TBlockFrame;
+
+  procedure GetBindedFrameParamValues(F: TBlockFrame);
+  var
+    P: TParamDescription;
+  begin
+    for P in F.BlockDescription.Params.Values do
+      if
+        (P.SourceParamName <> '') and
+        (P.SourceBlockId = 0) and
+        (P.ParamDirection in [pdOut, pdInOut])
+      then
+        ParamValues.AddOrSetValue(P.SourceParamName, F.ParamValues[P.Name]);
+  end;
+
 begin
 //  PostEditorsValues;
   // пока без каскадных сохранений
@@ -480,6 +497,7 @@ begin
       Continue;
 //    F.PostEditorsValues;
     F.Save;
+    GetBindedFrameParamValues(F);
     F.IsOpened := true;
   end;
   if IsTransactionStart then
@@ -497,6 +515,19 @@ begin
       (F as TProcedureFrame).Transaction := Value
     else if F is TFormFrame then
       (F as TFormFrame).Transaction := Value
+end;
+
+function TFormFrame.ConfirmCancel: boolean;
+var
+  F: TBlockFrame;
+begin
+  Result := false;
+  for F in FFrames.Values do
+    if (not F.BlockDescription.IsDataSet) and F.ConfirmCancel then
+    begin
+      Result := true;
+      Exit;
+    end;
 end;
 
 constructor TFormFrame.Create(AOwner: TComponent);
@@ -540,5 +571,11 @@ function TIndexOnParentComparer<T>.Compare(const Left, Right: T): Integer;
 begin
   Result := Sign(ExtractIndexOnParent(Left) - ExtractIndexOnParent(Right));
 end;
+
+initialization
+  ;
+
+finalization
+  FIndexOnParentComparer.Free;
 
 end.

@@ -100,6 +100,7 @@ begin
   Assert(not AProcedure.IsDataSet);
   PrepareQuery(AProcedure, AParamValues);
   FQuery.Execute();
+  FillParamsFromQuery(FQuery, AProcedure, AParamValues);
 end;
 
 procedure TOracleDirectTransaction.MakeSavepoint(const AName: string);

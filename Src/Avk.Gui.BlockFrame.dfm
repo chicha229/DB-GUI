@@ -13,17 +13,17 @@ inherited BlockFrame: TBlockFrame
     AnchorY = 20
   end
   inherited ClientPanel: TPanel
-    Top = 90
+    Top = 88
     Width = 463
-    Height = 164
-    ExplicitTop = 90
+    Height = 166
+    ExplicitTop = 88
     ExplicitWidth = 463
-    ExplicitHeight = 164
+    ExplicitHeight = 166
     object ParamsScrollBox: TScrollBox
       Left = 0
       Top = 0
       Width = 463
-      Height = 164
+      Height = 166
       Align = alClient
       BorderStyle = bsNone
       TabOrder = 0
@@ -32,9 +32,10 @@ inherited BlockFrame: TBlockFrame
   object BarManager: TdxBarManager
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -12
-    Font.Name = 'Segoe UI'
+    Font.Height = -11
+    Font.Name = 'Tahoma'
     Font.Style = []
+    CanCustomize = False
     Categories.Strings = (
       'Default'
       #1052#1077#1085#1102
@@ -58,9 +59,12 @@ inherited BlockFrame: TBlockFrame
     DockControlHeights = (
       0
       0
-      51
+      49
       0)
     object BarManagerMenuBar: TdxBar
+      AllowClose = False
+      AllowCustomizing = False
+      AllowQuickCustomizing = False
       Caption = 'Custom 1'
       CaptionButtons = <>
       DockedDockingStyle = dsTop
@@ -89,11 +93,14 @@ inherited BlockFrame: TBlockFrame
       WholeRow = True
     end
     object BarManagerToolBar: TdxBar
+      AllowClose = False
+      AllowCustomizing = False
+      AllowQuickCustomizing = False
       Caption = 'Custom 2'
       CaptionButtons = <>
       DockedDockingStyle = dsTop
       DockedLeft = 0
-      DockedTop = 25
+      DockedTop = 23
       DockingStyle = dsTop
       FloatLeft = 422
       FloatTop = 0

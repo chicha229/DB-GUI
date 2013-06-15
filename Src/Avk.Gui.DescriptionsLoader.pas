@@ -58,7 +58,7 @@ implementation
 {$R *.dfm}
 
 uses
-  System.Variants,
+  System.Variants, Vcl.Menus,
   Avk.Gui.OracleDirectConnect,
   Avk.Core.Utils, Avk.Gui.CustomMainDM;
 
@@ -266,6 +266,7 @@ begin
       BA.ImageIndex := BlockActionsQuery.FieldByName('image_index').AsInteger;
     BA.ActionStyle := GetActionStyleByName(BlockActionsQuery.FieldByName('action_style').AsString);
     BA.RefreshMode := GetRefreshModeByName(BlockActionsQuery.FieldByName('refresh_mode').AsString);
+    BA.ShortCut := TextToShortCut(BlockActionsQuery.FieldByName('shortcut').AsString);
 
     BA.ParamBinds.Clear;
     ActionBindsQuery.Locate('block;action', VarArrayOf([B.Name, BA.Name]), []);
@@ -540,7 +541,6 @@ begin
 
   // чистим BlocksManager от удаленных блоков, не освобождая их,
   // поскольку они могут использоваться во фреймах
-  // TODO: подумать, считать ли это утечкой памяти!
   for BlockName in BlocksManager.Blocks.Keys do
   begin
     B := BlocksManager.Blocks[BlockName];
@@ -611,6 +611,8 @@ begin
   FLoadedChildBlocks.Free;
   FLoadedBlockActions.Free;
   FLoadedBlockRefBinds.Free;
+  FLoadedParamRefs.Free;
+  FLoadedPanels.Free;
 end;
 
 class procedure TDescriptionsLoaderDM.Execute;

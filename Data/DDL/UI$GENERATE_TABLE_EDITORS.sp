@@ -4,24 +4,27 @@ CREATE OR ALTER PROCEDURE UI$GENERATE_TABLE_EDITORS (
 RETURNS (
     O_SCRIPT VARCHAR(8000))
 AS
-declare variable L_GRID_CURSOR_NAME D_IDENT;
-declare variable L_DETAIL_CURSOR_NAME D_IDENT;
-declare variable L_TABLE_DESCRIPTION D_NAME;
-declare variable L_WHERE_D varchar(1000);
-declare variable L_WHERE_D_ITEM varchar(100);
-declare variable L_FIELD_NAME D_IDENT;
-declare variable L_FIELD_CAPTION D_NAME;
-declare variable L_FIELD_TYPE_D D_IDENT;
-declare variable L_FIELD_INDEX integer;
-declare variable L_ACTION D_IDENT;
-declare variable L_ACTION_ID D_IDENT;
-declare variable L_FIELDS varchar(1000);
-declare variable L_FIELD_DATAS varchar(1000);
-declare variable L_FIELD_PARAMS varchar(1000);
-declare variable L_IN_PARAMS varchar(1000);
-declare variable L_FIELD_UPDATE varchar(1000);
-declare variable L_FIELD_UPDATES varchar(1000);
-declare variable L_CRLF varchar(10);
+  declare variable L_GRID_CURSOR_NAME D_IDENT;
+  declare variable L_DETAIL_CURSOR_NAME D_IDENT;
+  declare variable L_TABLE_DESCRIPTION D_NAME;
+  declare variable L_WHERE_D varchar(1000);
+  declare variable L_WHERE_D_ITEM varchar(100);
+  declare variable L_FIELD_NAME D_IDENT;
+  declare variable L_FIELD_CAPTION D_NAME;
+  declare variable L_FIELD_TYPE_D D_IDENT;
+  declare variable L_FIELD_INDEX integer;
+  declare variable L_ACTION D_IDENT;
+  declare variable L_ACTION_ID D_IDENT;
+  declare variable L_FIELDS varchar(1000);
+  declare variable L_FIELD_DATAS varchar(1000);
+  declare variable L_FIELD_PARAMS varchar(1000);
+  declare variable L_IN_PARAMS varchar(1000);
+  declare variable L_FIELD_UPDATE varchar(1000);
+  declare variable L_FIELD_UPDATES varchar(1000);
+  declare variable L_CRLF varchar(10);
+  declare variable l_out_params varchar(1000);
+  declare variable l_out_into varchar(1000);
+  declare variable l_out_fields varchar(1000);
 begin
   l_crlf = ascii_char(13) || ascii_char(10);
   l_grid_cursor_name = i_table_name || '_CR';
@@ -92,12 +95,18 @@ begin
   execute procedure ui$get_table_fields_str(i_table_name, 'I_', 1) returning_values (l_field_datas);
   execute procedure ui$get_table_fields_str(i_table_name, null, 0) returning_values (l_fields);
   execute procedure ui$get_table_fields_str(i_table_name, ':I_', 0) returning_values (l_field_params);
+  execute procedure ui$get_table_fields_str(i_table_name, 'O_', 1, 1) returning_values (l_out_params);
+  execute procedure ui$get_table_fields_str(i_table_name, null, 0, 1) returning_values (l_out_fields);
+  execute procedure ui$get_table_fields_str(i_table_name, ':O_', 0, 1) returning_values (l_out_into);
 
   o_script = o_script || 'CREATE OR ALTER PROCEDURE ' || i_table_name || '_INS' || l_crlf;
   o_script = o_script || '(' || l_field_datas || ')' || l_crlf;
+  o_script = o_script || 'RETURNS (' || l_out_params || ')' || l_crlf;
   o_script = o_script || 'AS BEGIN' || l_crlf;
   o_script = o_script || '  INSERT INTO ' || i_table_name || ' (' || l_fields || ')' || l_crlf;
-  o_script = o_script || '  VALUES  (' || l_field_params || ');' || l_crlf;
+  o_script = o_script || '  VALUES  (' || l_field_params || ')' || l_crlf;
+  o_script = o_script || '  RETURNING (' || l_out_fields || ')' || l_crlf;
+  o_script = o_script || '  INTO (' || l_out_into || ')' || l_crlf;
   o_script = o_script || 'END^' || l_crlf;
 
   -- изменения записи
@@ -158,13 +167,15 @@ begin
     insert into ui$block_action (
         id, block, caption,
         links_to, action_style,
-        image_index, order_num, refresh_mode
+        image_index, order_num,
+        refresh_mode, shortcut
       )
       select
         a.id, :l_grid_cursor_name, a.name,
         :i_table_name || '_' || a.name_in_code || '_FR',
         'button',
-        a.image_index, a.order_num, a.refresh_mode
+        a.image_index, a.order_num,
+        a.refresh_mode, a.shortcut
       from ui$default_action a
       where a.id = :l_action
       returning id into :l_action_id;

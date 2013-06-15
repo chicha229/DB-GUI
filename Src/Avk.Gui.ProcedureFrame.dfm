@@ -12,14 +12,14 @@ inherited ProcedureFrame: TProcedureFrame
   end
   inherited ClientPanel: TPanel
     Width = 419
-    Height = 231
+    Height = 233
     ExplicitWidth = 419
-    ExplicitHeight = 231
+    ExplicitHeight = 233
     object TreeList: TcxDBTreeList [0]
       Left = 0
       Top = 100
       Width = 419
-      Height = 131
+      Height = 133
       Hint = ''
       Align = alClient
       Bands = <
@@ -36,7 +36,7 @@ inherited ProcedureFrame: TProcedureFrame
       Left = 0
       Top = 100
       Width = 419
-      Height = 131
+      Height = 133
       Align = alClient
       TabOrder = 1
       object GridTableView: TcxGridDBBandedTableView
@@ -105,7 +105,7 @@ inherited ProcedureFrame: TProcedureFrame
     DockControlHeights = (
       0
       0
-      51
+      49
       0)
     inherited BarManagerToolBar: TdxBar
       ItemLinks = <

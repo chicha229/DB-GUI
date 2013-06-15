@@ -2,30 +2,31 @@ CREATE OR ALTER PROCEDURE UI$GENERATE_EDITOR_FORM (
     I_TABLE_NAME D_IDENT,
     I_ACTION D_IDENT)
 AS
-declare variable L_ACTION_CODE_NAME D_IDENT;
-declare variable L_FORM_NAME D_IDENT;
-declare variable L_FORM_DESCRIPTION D_NAME;
-declare variable L_DETAIL_CURSOR_NAME D_IDENT;
-declare variable L_EDIT_PROCEDURE D_IDENT;
-declare variable L_EDIT_PROCEDURE_BLOCK_NAME D_IDENT;
-declare variable L_CURSOR_CHILD integer;
-declare variable L_EDIT_CHILD integer;
-declare variable L_FORM_PANEL integer;
-declare variable L_LAST_REF integer;
-declare variable L_REF_ID integer;
-declare variable L_REF_LINKS_TO D_IDENT;
-declare variable L_REF_INDEX smallint;
-declare variable L_REF_FIELD D_IDENT;
-declare variable L_REF_FIELD_POS smallint;
+  declare variable L_ACTION_CODE_NAME D_IDENT;
+  declare variable L_FORM_NAME D_IDENT;
+  declare variable L_FORM_DESCRIPTION D_NAME;
+  declare variable L_DETAIL_CURSOR_NAME D_IDENT;
+  declare variable L_EDIT_PROCEDURE D_IDENT;
+  declare variable L_EDIT_PROCEDURE_BLOCK_NAME D_IDENT;
+  declare variable L_CURSOR_CHILD integer;
+  declare variable L_EDIT_CHILD integer;
+  declare variable L_FORM_PANEL integer;
+  declare variable L_LAST_REF integer;
+  declare variable L_REF_ID integer;
+  declare variable L_REF_LINKS_TO D_IDENT;
+  declare variable L_REF_INDEX smallint;
+  declare variable L_REF_FIELD D_IDENT;
+  declare variable L_REF_FIELD_POS smallint;
+  declare variable l_force_save d_boolean;
 begin
-  select r.rdb$description || ' - ' || a.name, a.name_in_code
+  select r.rdb$description || ' - ' || a.name, a.name_in_code, a.force_save
     from ui$default_action a
     cross join rdb$relations r
     where
       a.id = :i_action and
       r.rdb$relation_name = :i_table_name and
       1=1
-    into :l_form_description, :l_action_code_name;
+    into :l_form_description, :l_action_code_name, :l_force_save;
 
   l_edit_procedure = i_table_name || '_' || l_action_code_name;
   l_form_name = l_edit_procedure || '_FR';
@@ -46,8 +47,8 @@ begin
   -- процедура редактирования
   insert into ui$block (id, block_type, name, is_modal)
     values (:l_edit_procedure_block_name, 'procedure', :l_form_description, 1);
-  insert into ui$procedure (id, procedure_name)
-    values (:l_edit_procedure_block_name, :l_edit_procedure);
+  insert into ui$procedure (id, procedure_name, force_save)
+    values (:l_edit_procedure_block_name, :l_edit_procedure, :l_force_save);
   insert into ui$block_param (
       block, param, param_direction, data_type, order_num, caption,
       visible, required, group_name, enabler_param, read_only, call_order_num
@@ -60,6 +61,21 @@ begin
     join ui$get_table_fields(:i_table_name) f on f.field_name = p.param
     where
       p."BLOCK" = :i_table_name || '_CR' and
+      1=1;
+  insert into ui$block_param (
+      block, param, param_direction, data_type, order_num, caption,
+      visible, required, group_name, enabler_param, read_only, call_order_num
+    )
+    select
+      :l_edit_procedure_block_name, 'O_' || f.field_name, 'out',
+      f.field_type_name, p.order_num, coalesce(p.caption, f.field_name),
+      p.visible, p.required, p.group_name, p.enabler_param, p.required, p.call_order_num
+    from ui$block_param p
+    join ui$get_table_fields(:i_table_name) f on f.field_name = p.param
+    where
+      p."BLOCK" = :i_table_name || '_CR' and
+      p.index_in_key is not null and
+      :i_action = 'insert' and
       1=1;
 
   -- блоки - курсор и процедура редактирования
@@ -81,6 +97,19 @@ begin
     where
       f.index_on_key is not null and
       :i_action <> 'insert' and
+      1=1;
+
+  -- выходные параметры вставки - первичный ключ
+  insert into ui$block_param (block, param, param_direction, data_type, order_num, caption, call_order_num, visible)
+    select
+      :l_form_name, 'O_' || f.field_name, 'out', f.field_type_name,
+      f.index_on_key,
+      coalesce(f.field_description, f.field_name),
+      f.index_on_key, 0
+    from ui$get_table_fields(:i_table_name) f
+    where
+      f.index_on_key is not null and
+      :i_action = 'insert' and
       1=1;
 
   -- бинд параметров курсора от параметров формы
@@ -106,6 +135,22 @@ begin
       'I_' || f.field_name, case when :i_action = 'delete' then 1 end,
       :l_detail_cursor_name, :l_cursor_child, f.field_name
     from ui$get_table_fields(:i_table_name) f;
+
+  -- бинд выходных значений ключа вставки к форме
+  insert into ui$form_child_param (
+      form_child, form, block,
+      param, read_only,
+      source_block, source_child, source_param
+    )
+    select
+      :l_edit_child, :l_form_name, :l_edit_procedure_block_name,
+      'O_' || f.field_name, null,
+      null, null, 'O_' || f.field_name
+    from ui$get_table_fields(:i_table_name) f
+    where
+      f.index_on_key is not null and
+      :i_action = 'insert' and
+      1=1;
 
   -- выбор значений из справочников
   l_last_ref = 0;

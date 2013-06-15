@@ -36,7 +36,7 @@ implementation
 
 function TFrameModalForm.ConfirmCancel: boolean;
 begin
-  Result := true;
+  Result := FFrame.ConfirmCancel;
 end;
 
 procedure TFrameModalForm.DropChanges;
@@ -55,7 +55,6 @@ end;
 
 function TFrameModalForm.Modified: boolean;
 begin
-  // TODO: развернуть, вычислить!
   FFrame.EditorsToParamValues;
   Result := FFrame.Modified;
 end;
