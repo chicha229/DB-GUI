@@ -5,21 +5,21 @@ CREATE OR ALTER PROCEDURE UI$PROCEDURE_UPD (
     I_PROCEDURE_NAME VARCHAR(30),
     I_IS_GRID_FOR_TABLE VARCHAR(30),
     I_IS_MODAL SMALLINT,
-    I_FORCE_SAVE SMALLINT)
+    I_FORCE_SAVE SMALLINT,
+    I_GRID_STYLE VARCHAR(30))
 AS
 begin
-  update ui$procedure t
-  set
-   t.procedure_name=:i_procedure_name,
-   t.is_grid_for_table=:i_is_grid_for_table,
-   t.force_save = :i_force_save
-  where t.id=:i_id and 1=1;
+  update UI$PROCEDURE T
+  set T.PROCEDURE_NAME = :I_PROCEDURE_NAME,
+      T.IS_GRID_FOR_TABLE = :I_IS_GRID_FOR_TABLE,
+      T.FORCE_SAVE = :I_FORCE_SAVE,
+      T.GRID_STYLE = :I_GRID_STYLE
+  where T.ID = :I_ID and
+        1 = 1;
 
-  update ui$block b
-    set
-      b.name = :i_name,
-      b.custom_class = :i_custom_class,
-      b.is_modal = :i_is_modal
-    where
-      b.id = :i_id;
+  update UI$BLOCK B
+  set B.NAME = :I_NAME,
+      B.CUSTOM_CLASS = :I_CUSTOM_CLASS,
+      B.IS_MODAL = :I_IS_MODAL
+  where B.ID = :I_ID;
 end

@@ -34,6 +34,7 @@ type
     FAutoRefresh: boolean;
     FOrderNum: integer;
     FCallOrderNum: integer;
+    FDefaultValue: string;
 
     procedure SetDataType(const Value: TFieldType);
     procedure SetDisplayLabel(const Value: string);
@@ -52,6 +53,7 @@ type
     procedure SetAutoRefresh(const Value: boolean);
     procedure SetOrderNum(const Value: integer);
     procedure SetCallOrderNum(const Value: integer);
+    procedure SetDefaultValue(const Value: string);
   public
     property Name: string read FName write SetName;
     property DisplayLabel: string read FDisplayLabel write SetDisplayLabel;
@@ -66,6 +68,7 @@ type
     property AutoRefresh: boolean read FAutoRefresh write SetAutoRefresh;
     property OrderNum: integer read FOrderNum write SetOrderNum;
     property CallOrderNum: integer read FCallOrderNum write SetCallOrderNum;
+    property DefaultValue: string read FDefaultValue write SetDefaultValue;
 
     // для связей мастер-деталь внутри формы
     // и привязки параметров формы к параметрам ее блоков
@@ -278,6 +281,8 @@ type
     property Blocks: TObjectDictionary<string, TBlockDescription> read FBlocks;
   end;
 
+  TGridStyle = (gsRows, gsColumns);
+
   // Блок типа процедура - с процедурой, возможно возвращающей датасет
   TProcedureDescription = class (TBlockDescription)
   private
@@ -285,20 +290,26 @@ type
     FParamsToGridDirection: TDrawDirection;
     FProcedureOwner: string;
     FForceSave: boolean;
+    FPackageName: string;
+    FGridStyle: TGridStyle;
 
     procedure SetParamsToGridDirection(const Value: TDrawDirection);
     procedure SetProcedureName(const Value: string);
     procedure SetProcedureOwner(const Value: string);
     procedure SetForceSave(const Value: boolean);
+    procedure SetPackageName(const Value: string);
+    procedure SetGridStyle(const Value: TGridStyle);
   protected
     procedure ValidateInternal; override;
   public
 
-    property ProcedureName: string read FProcedureName write SetProcedureName;
     property ProcedureOwner: string read FProcedureOwner write SetProcedureOwner;
+    property PackageName: string read FPackageName write SetPackageName;
+    property ProcedureName: string read FProcedureName write SetProcedureName;
 
     property ParamsToGridDirection: TDrawDirection read FParamsToGridDirection write SetParamsToGridDirection;
     property ForceSave: boolean read FForceSave write SetForceSave;
+    property GridStyle: TGridStyle read FGridStyle write SetGridStyle;
   end;
 
   // панель как группировка блоков
@@ -417,6 +428,11 @@ end;
 procedure TParamDescription.SetDataType(const Value: TFieldType);
 begin
   FDataType := Value;
+end;
+
+procedure TParamDescription.SetDefaultValue(const Value: string);
+begin
+  FDefaultValue := Value;
 end;
 
 procedure TParamDescription.SetDisplayLabel(const Value: string);
@@ -904,6 +920,16 @@ begin
   FForceSave := Value;
 end;
 
+procedure TProcedureDescription.SetGridStyle(const Value: TGridStyle);
+begin
+  FGridStyle := Value;
+end;
+
+procedure TProcedureDescription.SetPackageName(const Value: string);
+begin
+  FPackageName := Value;
+end;
+
 procedure TProcedureDescription.SetParamsToGridDirection(
   const Value: TDrawDirection);
 begin
@@ -1058,7 +1084,7 @@ end;
 
 begin
   Result :=
-    inherited GetIsModal or
+    FIsModal or
     ModalBlockExists;
 end;
 
@@ -1099,9 +1125,9 @@ begin
     begin
       if P.SourceParamName = '' then
         Continue;
-      if not (P.ParamDirection in [pdIn, pdOut]) then
+      if P.ParamDirection in [pdCursor] then
         AddValidationErrorFmt(
-          'Параметр %s - имеет источник, но сам не in или inout',
+          'Параметр %s - имеет источник, но сам cursor',
           [P.Name]
         );
       if P.SourceBlockId <> 0 then

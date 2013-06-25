@@ -99,6 +99,8 @@ destructor TCustomMainDataModule.Destroy;
 begin
   FCommonRefs.Free;
   FLogDetails.Free;
+  FMainTransaction.Rollback;
+  FMainTransaction := nil;
   inherited;
 end;
 

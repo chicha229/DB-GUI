@@ -9,10 +9,8 @@ inherited FormsMenuFrame: TFormsMenuFrame
       OptionsView.ColumnAutoWidth = True
       OnDblClick = TreeListDblClick
     end
-    inherited SearchPanel: TPanel
-      inherited SearchEdit: TcxButtonEdit
-        ExplicitHeight = 22
-      end
+    inherited VerticalGrid: TcxDBVerticalGrid
+      Version = 1
     end
   end
   inherited BarManager: TdxBarManager

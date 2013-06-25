@@ -14,7 +14,7 @@ uses
   cxGridBandedTableView, cxGridDBBandedTableView, cxGrid, cxInplaceContainer,
   cxTLData, cxDBTL, Vcl.ExtCtrls, cxLabel, cxMaskEdit, dxSkinsCore,
   cxCheckBox, cxTextEdit, cxButtonEdit, cxGroupBox, dxSkinsDefaultPainters,
-  dxSkinscxPCPainter, dxSkinsdxBarPainter;
+  dxSkinscxPCPainter, dxSkinsdxBarPainter, cxVGrid, cxDBVGrid;
 
 type
   TFormsMenuFrame = class (TProcedureFrame)

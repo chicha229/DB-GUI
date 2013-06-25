@@ -19,7 +19,14 @@ uses
   Avk.Gui.Descriptions, cxGridBandedTableView, cxGridDBBandedTableView,
   dxBar, cxTL, cxTLdxBarBuiltInMenu, cxInplaceContainer, cxTLData, cxDBTL,
   cxMaskEdit, cxCheckBox, cxButtonEdit, dxSkinsDefaultPainters,
-  dxSkinsdxBarPainter, dxSkinscxPCPainter, Avk.Gui.Connection;
+  dxSkinsdxBarPainter, dxSkinscxPCPainter, Avk.Gui.Connection, cxSplitter,
+  cxVGrid, cxDBVGrid, cxGridCustomPopupMenu, cxGridPopupMenu, dxPSGlbl, dxPSUtl,
+  dxPSEngn, dxPrnPg, dxBkgnd, dxWrap, dxPrnDev, dxPSCompsProvider,
+  dxPSFillPatterns, dxPSEdgePatterns, dxPSPDFExportCore, dxPSPDFExport,
+  cxDrawTextUtils, dxPSPrVwStd, dxPSPrVwAdv, dxPSPrVwRibbon,
+  dxPScxPageControlProducer, dxPScxGridLnk, dxPScxGridLayoutViewLnk,
+  dxPScxEditorProducers, dxPScxExtEditorProducers, dxPScxTLLnk, dxPSCore,
+  dxPScxCommon;
 
 type
   TProcedureFrame = class (TBlockFrame)
@@ -39,6 +46,20 @@ type
     SearchEdit: TcxButtonEdit;
     cxLabel1: TcxLabel;
     MemTable: TADMemTable;
+    VerticalGrid: TcxDBVerticalGrid;
+    cxGridPopupMenu1: TcxGridPopupMenu;
+    ExcelExportSaveDialog: TSaveDialog;
+    ExcelExportBarButton: TdxBarButton;
+    ExportBarSubItem: TdxBarSubItem;
+    ComponentPrinter: TdxComponentPrinter;
+    GridPrinterLink: TdxGridReportLink;
+    TreeListPrinterLink: TcxDBTreeListReportLink;
+    PrintPreviewBarButton: TdxBarButton;
+    dxBarSeparator1: TdxBarSeparator;
+    PrintBarButton: TdxBarButton;
+    VerticalGridBarButton: TdxBarButton;
+    GridsSplitter: TcxSplitter;
+    VerticalGridCategoryRow1: TcxCategoryRow;
     procedure FullExpandBarButtonClick(Sender: TObject);
     procedure FullCollapseBarButtonClick(Sender: TObject);
     procedure RefreshDataBarButtonClick(Sender: TObject);
@@ -50,12 +71,18 @@ type
     procedure SearchEditPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure SearchEditPropertiesChange(Sender: TObject);
-    procedure QueryAfterOpen(DataSet: TDataSet);
+    procedure MemTableAfterScroll(DataSet: TDataSet);
+    procedure MemTableAfterOpen(DataSet: TDataSet);
+    procedure ExcelExportBarButtonClick(Sender: TObject);
+    procedure PrintPreviewBarButtonClick(Sender: TObject);
+    procedure PrintBarButtonClick(Sender: TObject);
+    procedure VerticalGridBarButtonClick(Sender: TObject);
   private
     { Private declarations }
     FRecordsModified: boolean;
     FParamsModified: boolean;
 
+    procedure PrepareTitle;
     function GetProcedureDescription: TProcedureDescription;
     procedure ApplyDataSetView;
     function OpenQuery: boolean;
@@ -70,12 +97,18 @@ type
     procedure SaveSearchFields;
     procedure ApplySearchVisible;
     function RefreshOneRecord(PV: TParamValues): boolean;
+    procedure FillVerticalGridFields;
+    procedure FillGridFields(GroupsFound: Boolean);
+    procedure FillTreeFields(GroupsFound: Boolean);
+    procedure ApplyVerticalGridVisible;
   public
     SearchFields: string;
 
     { Public declarations }
     procedure EditorsToParamValues; override;
     procedure OnChangeParamValues(Sender: TBlockFrame; AChangeId: Int64); override;
+
+    function GetPrinterLink: TdxCustomcxControlReportLink;
 
     procedure FillFields;
     procedure Build(AParent: TWinControl); override;
@@ -106,6 +139,8 @@ implementation
 uses
   Generics.Collections,
   JclSysUtils,
+  CodeSiteLogging,
+  cxTLExportLink, cxGridExportLink, dxPrnDlg,
   Avk.Gui.CustomMainDM, Avk.Gui.SearchFieldsSelect,
   AVK.Core.Utils, AVK.DX.LookupFilter;
 
@@ -115,6 +150,7 @@ const
   cGridSummaryRow = 'GRID_SUMMARY_ROW';
   cSearchFieldsSettingsName = 'GRID_SEARCH_FIELDS';
   cSummaryFooterFormat = '### ### ### ##0.00';
+  cVerticalGrid = 'VERTICAL_GRID';
 
 { TProcedureFrame }
 
@@ -150,91 +186,36 @@ begin
     end;
 end;
 
+procedure TProcedureFrame.ExcelExportBarButtonClick(Sender: TObject);
+begin
+  inherited;
+  if ExcelExportSaveDialog.Execute then
+  begin
+    if BlockDescription.IsTree then
+      cxExportTLToExcel(ExcelExportSaveDialog.FileName, TreeList)
+    else
+      ExportGridToExcel(ExcelExportSaveDialog.FileName, Grid);
+    if Confirm('Экспорт завершен. Открыть файл сейчас?') then
+      ShellOpenFile(ExcelExportSaveDialog.FileName);
+  end;
+end;
+
 procedure TProcedureFrame.FillFields;
 var
-  i: integer;
-  P: TParamDescription;
   GroupsFound: boolean;
-  C: TcxGridDBBandedColumn;
-  TLC: TcxDBTreeListColumn;
-  LastBandName: string;
-  LastBand: TcxGridBand;
-  LastTLBand: TcxTreeListBand;
+  P: TParamDescription;
 begin
   GroupsFound := false;
-  for P in ProcedureDescription.Params.Values do
+  for P in ProcedureDescription.SortedParams do
     if P.Group <> '' then
       GroupsFound := true;
 
   if ProcedureDescription.IsTree then
-  begin
-    // заполняем поля дерева
-    TreeList.DataController.DataSource := DataSource;
-    GridTableView.DataController.DataSource := nil;
-    TreeList.DataController.CreateAllItems;
-    if GroupsFound then
-    begin
-      LastTLBand := nil;
-      LastBandName := '';
-      for P in ProcedureDescription.SortedParams do
-        if (P.ParamDirection = pdField) and ((P.Group <> '')) then
-        begin
-          TLC := TreeList.ColumnByName(P.Name) as TcxDBTreeListColumn;
-          if LastBandName <> P.Group then
-            LastTLBand := TreeList.Bands.Add;
-          TLC.Position.BandIndex := LastTLBand.Index;
-        end;
-    end;
-    TreeList.DataController.KeyField := ProcedureDescription.KeyFieldNames;
-    TreeList.DataController.ParentField := ProcedureDescription.ParentFieldNames;
-    for i := 0 to TreeList.ColumnCount - 1 do
-    begin
-      TreeList.Columns[i].Caption.AlignHorz := taCenter;
-      TreeList.Columns[i].Styles.Header := CustomMainDM.GridHeaderStyle;
-    end;
-    TreeList.ApplyBestFit;
-    TreeList.BringToFront;
-  end
+    FillTreeFields(GroupsFound)
   else
-  begin
-    // заполняем поля грида
-    TreeList.DataController.DataSource := nil;
-    GridTableView.DataController.DataSource := DataSource;
-    GridTableView.DataController.CreateAllItems();
-    if GroupsFound then
-    begin
-      LastBand := nil;
-      LastBandName := '';
-      for P in ProcedureDescription.Params.Values do
-        if (P.ParamDirection = pdField) and (P.Group <> '') then
-        begin
-          C := GridTableView.FindItemByName(P.Name) as TcxGridDBBandedColumn;
-          if LastBandName <> P.Group then
-            LastBand := GridTableView.Bands.Add;
-          C.Position.BandIndex := LastBand.Index;
-        end;
-    end;
-    for i := 0 to GridTableView.ColumnCount - 1 do
-    begin
-      C := GridTableView.Columns[i];
-      C.HeaderAlignmentHorz := taCenter;
-      C.Styles.Header := CustomMainDM.GridHeaderStyle;
-      if ProcedureDescription.Params.ContainsKey(C.DataBinding.FieldName) then
-      begin
-        P := ProcedureDescription.ParamByName(C.DataBinding.FieldName);
-        if P.DataType = ftBoolean then
-        begin
-          C.PropertiesClass := TcxCheckBoxProperties;
-          (C.Properties as TcxCheckBoxProperties).ValueChecked := 1;
-          (C.Properties as TcxCheckBoxProperties).ValueUnChecked := 0;
-        end;
-      end
-      else
-        C.Visible := false;
-    end;
-    GridTableView.ApplyBestFit();
-    Grid.BringToFront;
-  end;
+    FillGridFields(GroupsFound);
+
+  FillVerticalGridFields;
 end;
 
 function TProcedureFrame.GetGridMode: boolean;
@@ -250,9 +231,23 @@ begin
     Result := MemTable[ProcedureDescription.KeyFieldNames];
 end;
 
+function TProcedureFrame.GetPrinterLink: TdxCustomcxControlReportLink;
+begin
+  if BlockDescription.IsTree then
+    Result := TreeListPrinterLink
+  else
+    Result := GridPrinterLink;
+end;
+
 function TProcedureFrame.GetProcedureDescription: TProcedureDescription;
 begin
   Result := BlockDescription as TProcedureDescription;
+end;
+
+procedure TProcedureFrame.ApplyVerticalGridVisible;
+begin
+  VerticalGrid.Visible := VerticalGridBarButton.Down;
+  GridsSplitter.Visible := VerticalGridBarButton.Down;
 end;
 
 procedure TProcedureFrame.ApplyGridViewSettings;
@@ -276,6 +271,8 @@ begin
 
   ApplySummaryRow;
   ApplySearchVisible;
+
+  ApplyVerticalGridVisible;
 end;
 
 procedure TProcedureFrame.GridAutoWidthBarButtonClick(Sender: TObject);
@@ -318,9 +315,172 @@ begin
   GridAutoWidthBarButton.Down := LoadFrameSettingsValue(cGridAutoWidth, true);
   AllRecordsGridModeButton.Down := LoadFrameSettingsValue(cAllRecordsGridMode, true);
   GridSummaryRowBarButton.Down := LoadFrameSettingsValue(cGridSummaryRow, false);
+  VerticalGridBarButton.Down := LoadFrameSettingsValue(cVerticalGrid, false);
   SearchFields := LoadFrameSettingsValue(cSearchFieldsSettingsName);
 
   ApplyGridViewSettings;
+end;
+
+procedure TProcedureFrame.FillTreeFields(GroupsFound: Boolean);
+var
+  LastTLBand: TcxTreeListBand;
+  TLC: TcxDBTreeListColumn;
+  P: TParamDescription;
+  i: Integer;
+  ColumnIndex: integer;
+  LastBandName: string;
+begin
+  // заполняем поля дерева
+  ColumnIndex := 0;
+  TreeList.DataController.DataSource := DataSource;
+  GridTableView.DataController.DataSource := nil;
+  TreeList.DataController.CreateAllItems;
+  if GroupsFound then
+  begin
+    LastTLBand := nil;
+    LastBandName := '';
+    for P in ProcedureDescription.SortedParams do
+      if (P.ParamDirection = pdField) and ((P.Group <> '')) then
+      begin
+        TLC := TreeList.GetColumnByFieldName(P.Name);
+        if LastBandName <> P.Group then
+        begin
+          ColumnIndex := 0;
+          LastTLBand := TreeList.Bands.Add;
+        end;
+        TLC.Position.BandIndex := LastTLBand.Index;
+        TLC.Position.ColIndex := ColumnIndex;
+        Inc(ColumnIndex);
+      end;
+  end
+  else
+    for P in ProcedureDescription.SortedParams do
+      if (P.ParamDirection = pdField) and P.Visible then
+      begin
+        TLC := TreeList.GetColumnByFieldName(P.Name);
+        TLC.Position.ColIndex := ColumnIndex;
+        Inc(ColumnIndex);
+      end;
+  TreeList.DataController.KeyField := ProcedureDescription.KeyFieldNames;
+  TreeList.DataController.ParentField := ProcedureDescription.ParentFieldNames;
+  for i := 0 to TreeList.ColumnCount - 1 do
+  begin
+    TreeList.Columns[i].Caption.AlignHorz := taCenter;
+    TreeList.Columns[i].Styles.Header := CustomMainDM.GridHeaderStyle;
+  end;
+  TreeList.ApplyBestFit;
+  TreeList.BringToFront;
+end;
+
+procedure TProcedureFrame.FillGridFields(GroupsFound: Boolean);
+var
+  C: TcxGridDBBandedColumn;
+  LastBand: TcxGridBand;
+  P: TParamDescription;
+  LastBandName: string;
+  ColumnIndex: integer;
+begin
+  // заполняем поля грида
+  TreeList.DataController.DataSource := nil;
+  GridTableView.DataController.DataSource := DataSource;
+  GridTableView.DataController.CreateAllItems;
+  if GroupsFound then
+  begin
+    LastBand := nil;
+    LastBandName := '';
+    ColumnIndex := 0;
+    for P in ProcedureDescription.Params.Values do
+      if (P.ParamDirection = pdField) and (P.Group <> '') then
+      begin
+        C := GridTableView.GetColumnByFieldName(P.Name);
+        if LastBandName <> P.Group then
+        begin
+          ColumnIndex := 0;
+          LastBand := GridTableView.Bands.Add;
+        end;
+        C.Position.BandIndex := LastBand.Index;
+        C.Position.ColIndex := ColumnIndex;
+        Inc(ColumnIndex);
+      end;
+  end
+  else
+    ColumnIndex := 0;
+    for P in ProcedureDescription.SortedParams do
+      if (P.ParamDirection = pdField) and P.Visible then
+      begin
+        C := GridTableView.GetColumnByFieldName(P.Name);
+        C.Position.ColIndex := ColumnIndex;
+        Inc(ColumnIndex);
+      end;
+  for ColumnIndex := 0 to GridTableView.ColumnCount - 1 do
+  begin
+    C := GridTableView.Columns[ColumnIndex];
+    C.HeaderAlignmentHorz := taCenter;
+    C.Styles.Header := CustomMainDM.GridHeaderStyle;
+    if ProcedureDescription.Params.ContainsKey(C.DataBinding.FieldName) then
+    begin
+      P := ProcedureDescription.ParamByName(C.DataBinding.FieldName);
+      if P.DataType = ftBoolean then
+      begin
+        C.PropertiesClass := TcxCheckBoxProperties;
+        (C.Properties as TcxCheckBoxProperties).ValueChecked := 1;
+        (C.Properties as TcxCheckBoxProperties).ValueUnChecked := 0;
+      end;
+    end
+    else
+      C.Visible := false;
+  end;
+  GridTableView.ApplyBestFit;
+  Grid.BringToFront;
+end;
+
+procedure TProcedureFrame.FillVerticalGridFields;
+var
+  VC: TcxDBCellEdit;
+  LastGroup: string;
+  P: TParamDescription;
+  LastGroupRow: TcxCategoryRow;
+  Pr: TcxCheckBoxProperties;
+begin
+  LastGroup := '';
+  LastGroupRow := nil;
+  VerticalGrid.DataController.CreateAllItems;
+  for P in ProcedureDescription.SortedParams do
+    if P.ParamDirection = pdField then
+    begin
+      if P.Group <> LastGroup then
+      begin
+        LastGroup := P.Group;
+        LastGroupRow := TcxCategoryRow.Create(VerticalGrid);
+        VerticalGrid.DataController.AddItem(LastGroupRow);
+        LastGroupRow.Properties.Caption := P.Group;
+      end;
+      VC := VerticalGrid.DataController.GetItemByFieldName(P.Name) as TcxDBCellEdit;
+      if P.DataType = ftBoolean then
+      begin
+        VC.PropertiesClass := TcxCheckBoxProperties;
+        Pr := VC.Properties as TcxCheckBoxProperties;
+        Pr.ValueChecked := 1;
+        Pr.ValueUnchecked := 0;
+      end;
+      VC.Row.Parent := LastGroupRow;
+    end;
+end;
+
+procedure TProcedureFrame.MemTableAfterOpen(DataSet: TDataSet);
+begin
+  inherited;
+  BlockLogger.Send('AfterOpen', 'Self = ' + ProcedureDescription.Name);
+  PostFieldsToParamValues;
+end;
+
+procedure TProcedureFrame.MemTableAfterScroll(DataSet: TDataSet);
+begin
+  inherited;
+  if DataSet.ControlsDisabled then
+    Exit;
+  BlockLogger.Send('AfterScroll', 'Self = ' + ProcedureDescription.Name);
+  PostFieldsToParamValues;
 end;
 
 function TProcedureFrame.Modified: boolean;
@@ -329,7 +489,6 @@ begin
     Result := FRecordsModified
   else
   begin
-    // для удаления - должно быть всегда true!
     EditorsToParamValues;
     Result := FParamsModified or ProcedureDescription.ForceSave;
   end;
@@ -474,6 +633,7 @@ end;
 function TProcedureFrame.Open: boolean;
 begin
   IsOpening := true;
+  PostEditorsValues;
   Result := OpenQuery;
   if Result then
   begin
@@ -488,9 +648,14 @@ var
   CurrentRecordKey: variant;
 begin
   CurrentRecordKey := KeyFieldValues;
-  MemTable.Close;
-  OpenQuery;
-  KeyFieldValues := CurrentRecordKey;
+  MemTable.DisableControls;
+  try
+    MemTable.Close;
+    OpenQuery;
+    KeyFieldValues := CurrentRecordKey;
+  finally
+    MemTable.EnableControls;
+  end;
   CustomMainDM.OnRefreshProcedure(ProcedureDescription.Name);
   AfterRefresh;
 end;
@@ -519,11 +684,11 @@ begin
   SaveFrameSettingsValue(cGridAutoWidth, GridAutoWidthBarButton.Down);
   SaveFrameSettingsValue(cAllRecordsGridMode, AllRecordsGridModeButton.Down);
   SaveFrameSettingsValue(cGridSummaryRow, GridSummaryRowBarButton.Down);
+  SaveFrameSettingsValue(cVerticalGrid, VerticalGridBarButton.Down);
 end;
 
 function TProcedureFrame.OpenQuery: Boolean;
 begin
-  PostEditorsValues;
   Result := ProcedureDescription.IsDataSet;
   if Result then
   begin
@@ -535,7 +700,6 @@ begin
     if ProcedureDescription.IsTree then
       TreeList.FullExpand;
   end;
-  PostEditorsValues;
   SetButtonsProperties;
 //  ApplyUserSettings;
 end;
@@ -555,15 +719,67 @@ begin
   end;
 end;
 
-procedure TProcedureFrame.QueryAfterOpen(DataSet: TDataSet);
+procedure TProcedureFrame.PrepareTitle;
+var
+  Params: string;
+  P, RP: TParamDescription;
+  Ref: TBlockRef;
+  RefDataSet: TDataSet;
+  RefBlock: TBlockDescription;
+  RefValue: string;
+begin
+  for P in BlockDescription.Params.Values do
+    if
+      (P.ParamDirection in [pdIn, pdInOut]) and
+      P.Visible and
+      ParamValues.ContainsKey(P.Name) and
+      (not VarIsNull(ParamValues[P.Name]))
+    then
+    begin
+      Ref := GetBlockRef(P);
+      if Assigned(Ref) then
+      begin
+        RefBlock := BlocksManager.Blocks[Ref.RefsTo];
+        RefDataSet := CustomMainDM.GetRefInfo(Ref.RefsTo).DataSet;
+        RefDataSet.Locate(
+          RefBlock.KeyFieldNames,
+          RefControls[Ref.ID].EditorControl.EditValue,
+          []
+        );
+        RefValue := '';
+        for RP in RefBlock.Params.Values do
+          if RP.IndexInNameFields <> 0 then
+            RefValue := DelimitedConcat(RefValue, RefDataSet.FieldByName(RP.Name).DisplayText, ';');
+        Params := DelimitedConcat(Params, P.DisplayLabel + '=' + RefValue, CrLf);
+      end
+      else
+        Params := DelimitedConcat(
+          Params,
+          P.DisplayLabel + '=' + VarToStr(ParamControls[P.Name].EditorControl.EditValue),
+          CrLf
+        );
+    end;
+  GridPrinterLink.ReportTitle.Text := Self.Caption + CrLf + Params;
+end;
+
+procedure TProcedureFrame.PrintBarButtonClick(Sender: TObject);
 begin
   inherited;
-  PostFieldsToParamValues;
+  PrepareTitle;
+  GetPrinterLink.PrintEx(pnAll, 1, false);
+end;
+
+procedure TProcedureFrame.PrintPreviewBarButtonClick(Sender: TObject);
+begin
+  inherited;
+  PrepareTitle;
+  GetPrinterLink.Preview;
 end;
 
 procedure TProcedureFrame.QueryAfterPost(DataSet: TDataSet);
 begin
   inherited;
+  BlockLogger.Send('AfterPost', 'Self = ' + ProcedureDescription.Name);
   PostFieldsToParamValues;
 end;
 
@@ -585,6 +801,14 @@ procedure TProcedureFrame.ApplyDataSetView;
   end;
 
 begin
+  if ProcedureDescription.GridStyle = gsColumns then
+  begin
+    HideHeader;
+    VerticalGrid.Align := alClient;
+    VerticalGrid.Show;
+    Grid.Hide;
+  end;
+
   if ProcedureDescription.IsTree and (not Assigned(TreeList.OnDblClick)) then
     TreeList.OnDblClick := CallDblClickAction
   else
@@ -637,6 +861,7 @@ begin
   SearchPanel.Visible :=
     ProcedureDescription.IsDataSet and
     (not ProcedureDescription.IsTree) and
+    (ProcedureDescription.GridStyle = gsRows) and
     (SearchFields <> '')
 end;
 
@@ -685,6 +910,8 @@ var
   BA: TBlockAction;
 begin
   inherited;
+
+  // не датасет
   if
     (not ProcedureDescription.IsDataSet) and
     (
@@ -695,12 +922,14 @@ begin
       (AButton = AllRecordsGridModeButton) or
       (AButton = GridSummaryRowBarButton) or
       (AButton = SearchFieldsBarButton) or
+      (AButton = VerticalGridBarButton) or
       (1=0)
     )
   then
     AButton.Visible := ivNever;
 
-   if
+  // плоский грид
+  if
     (not ProcedureDescription.IsTree) and
     (
       (AButton = FullExpandBarButton) or
@@ -710,7 +939,8 @@ begin
   then
     AButton.Visible := ivNever;
 
-   if
+  // дерево
+  if
     (ProcedureDescription.IsTree) and
     (
       (AButton = AllRecordsGridModeButton) or
@@ -740,6 +970,12 @@ procedure TProcedureFrame.SetKeyFieldValues(const Value: variant);
 begin
   if ProcedureDescription.IsDataSet then
     MemTable.Locate(ProcedureDescription.KeyFieldNames, Value, []);
+end;
+
+procedure TProcedureFrame.VerticalGridBarButtonClick(Sender: TObject);
+begin
+  inherited;
+  ApplyVerticalGridVisible;
 end;
 
 procedure TProcedureFrame.Build(AParent: TWinControl);

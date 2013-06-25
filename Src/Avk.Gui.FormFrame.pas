@@ -25,6 +25,7 @@ type
     function GetFormDescription: TFormDescription;
     procedure BuildPanel(APanel: TPanelDescription; AParent: TWinControl);
     procedure BindFrameParamsFromSource(Frame: TBlockFrame; var AllParamsBinded: Boolean);
+    procedure SaveFrameBoundsRect;
   protected
     procedure SetTransaction(const Value: ITransaction); override;
   public
@@ -38,6 +39,8 @@ type
     function ConfirmCancel: boolean; override;
     procedure DropChanges; override;
 
+    procedure SaveFrameSettings; override;
+
     procedure OnChangeParamValues(Sender: TBlockFrame; AChangeId: Int64); override;
 
     procedure Build(AParent: TWinControl); override;
@@ -49,7 +52,8 @@ implementation
 uses
   System.Math, System.Generics.Defaults,
   cxPC,
-  Avk.Gui.ProcedureFrame, Avk.Gui.CustomMainForm, Avk.Gui.CustomMainDM;
+  Avk.Gui.ProcedureFrame, Avk.Gui.CustomMainForm, Avk.Gui.CustomMainDM,
+  AVK.Core.Utils;
 
 {$R *.dfm}
 
@@ -58,6 +62,9 @@ type
   public
     function Compare(const Left, Right: T): Integer; override;
   end;
+
+const
+  cPanelBounds = 'PANEL_BOUNDS_';
 
 var
   FIndexOnParentComparer: TIndexOnParentComparer<TObject>;
@@ -85,6 +92,7 @@ var
   T: TcxTabSheet;
   X, Y: integer;
   S: TSplitter;
+  R: string;
 begin
   S := nil;
   if APanel.ItemsDrawStyle = pddTabs then
@@ -139,6 +147,13 @@ begin
           P.BevelOuter := bvNone;
           P.Constraints.MinWidth := 200;
           P.Constraints.MinHeight := 200;
+          P.Tag := APanel.Id;
+          R := LoadFrameSettingsValue(cPanelBounds + IntToStr(APanel.Id));
+          if R <> '' then
+          begin
+            P.Width := StringToRect(R).Width;
+            P.Height := StringToRect(R).Height;
+          end;
           CP := P;
           FParentControls.Add(P);
         end
@@ -166,14 +181,14 @@ begin
       else if Assigned(Block) then
       begin
         F := CustomMainForm.CreateBlockFrame(Block, Transaction, false, Self);
+        F.OwnerFrame := Self;
         F.Build(CP);
         FFrames.Add(Block.ChildId, F);
-        F.OwnerFrame := Self;
         C := F;
       end;
 
-      C.Width := C.Constraints.MinWidth + 8;
-      C.Height := C.Constraints.MinHeight + 8;
+      C.Width := Max(C.Constraints.MinWidth + 8, C.Width);
+      C.Height := Max(C.Constraints.MinHeight + 8, C.Height);
 
       if (Assigned(Block) and Block.Visible) or Assigned(PD) then
       begin
@@ -267,7 +282,6 @@ function TFormFrame.GetFormDescription: TFormDescription;
 begin
   Result := BlockDescription as TFormDescription;
 end;
-
 
 function TFormFrame.Modified: boolean;
 var
@@ -505,6 +519,21 @@ begin
   Result := true;
 end;
 
+procedure TFormFrame.SaveFrameBoundsRect;
+var
+  C: TControl;
+begin
+  for C in FParentControls do
+    if C is TPanel then
+      SaveFrameSettingsValue(cPanelBounds + IntToStr(C.Tag), RectToString(C.BoundsRect));
+end;
+
+procedure TFormFrame.SaveFrameSettings;
+begin
+  inherited;
+  SaveFrameBoundsRect;
+end;
+
 procedure TFormFrame.SetTransaction(const Value: ITransaction);
 var
   F: TBlockFrame;
@@ -541,6 +570,7 @@ end;
 
 destructor TFormFrame.Destroy;
 begin
+  SaveFrameBoundsRect;
   FFrames.Free;
   FParentControls.Free;
   FRefParamValues.Free;

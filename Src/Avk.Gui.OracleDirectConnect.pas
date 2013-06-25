@@ -71,12 +71,16 @@ procedure TOracleDirectTransaction.Commit;
 begin
   inherited;
   ExecSQL('commit');
+  if GetTransaction.Active then
+    GetTransaction.Commit;
 end;
 
 procedure TOracleDirectTransaction.CommitRetaining;
 begin
   inherited;
   ExecSQL('commit');
+  if GetTransaction.Active then
+    GetTransaction.CommitRetaining;
 end;
 
 constructor TOracleDirectTransaction.Create;
@@ -120,7 +124,7 @@ begin
     'begin ' +
     DelimitedConcat(
       AProcedure.ProcedureOwner,
-      AProcedure.ProcedureName,
+      DelimitedConcat(AProcedure.PackageName, AProcedure.ProcedureName, '.'),
       '.'
     );
 
@@ -156,7 +160,7 @@ begin
   PrepareQuery(AProcedure, AParamValues);
   FQuery.Open;
   try
-    AData.CloneCursor(FQuery);
+    AData.CloneCursor(FQuery, true);
     FillDataSetFields(AData, AProcedure);
   finally
     FQuery.Close;
@@ -166,13 +170,18 @@ end;
 procedure TOracleDirectTransaction.Rollback;
 begin
   inherited;
-  ExecSQL('rollback');
+  if Assigned(FCmd.Connection) then
+    ExecSQL('rollback');
+  if GetTransaction.Active then
+    GetTransaction.Rollback;
 end;
 
 procedure TOracleDirectTransaction.RollbackRetaining;
 begin
   inherited;
   ExecSQL('rollback');
+  if GetTransaction.Active then
+    GetTransaction.RollbackRetaining;
 end;
 
 procedure TOracleDirectTransaction.RollbackToSavepoint(const AName: string);

@@ -71,13 +71,15 @@ end;
 procedure TFirebirdDirectTransaction.Commit;
 begin
   inherited;
-  GetTransaction.Commit;
+  if GetTransaction.Active then
+    GetTransaction.Commit;
 end;
 
 procedure TFirebirdDirectTransaction.CommitRetaining;
 begin
   inherited;
-  GetTransaction.CommitRetaining;
+  if GetTransaction.Active then
+    GetTransaction.CommitRetaining;
 end;
 
 constructor TFirebirdDirectTransaction.Create;
@@ -187,13 +189,15 @@ end;
 procedure TFirebirdDirectTransaction.Rollback;
 begin
   inherited;
-  GetTransaction.Rollback;
+  if GetTransaction.Active then
+    GetTransaction.Rollback;
 end;
 
 procedure TFirebirdDirectTransaction.RollbackRetaining;
 begin
   inherited;
-  GetTransaction.RollbackRetaining
+  if GetTransaction.Active then
+    GetTransaction.RollbackRetaining
 end;
 
 procedure TFirebirdDirectTransaction.RollbackToSavepoint(const AName: string);

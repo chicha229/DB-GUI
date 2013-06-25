@@ -28,7 +28,8 @@ uses
   Avk.Gui.DirectConnect in 'Src\Avk.Gui.DirectConnect.pas',
   Avk.Gui.OracleDirectConnect in 'Src\Avk.Gui.OracleDirectConnect.pas',
   Avk.Gui.FirebirdDirectConnect in 'Src\Avk.Gui.FirebirdDirectConnect.pas',
-  FastMM4Messages in '..\FastMM4\FastMM4Messages.pas';
+  FastMM4Messages in '..\FastMM4\FastMM4Messages.pas',
+  Avk.Core.StrConverts in 'Src\Avk.Core.StrConverts.pas';
 
 {$R *.res}
 

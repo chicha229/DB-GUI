@@ -75,7 +75,7 @@ end;
 
 procedure TBaseFrame.LoadFrameSettings;
 begin
-
+  ;
 end;
 
 function TBaseFrame.LoadFrameSettingsValue(Name: string; DefaultValue: boolean): boolean;

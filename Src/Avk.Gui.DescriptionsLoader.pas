@@ -83,7 +83,26 @@ const
     'insert', 'update', 'delete', 'full', 'none'
   );
 
+  cGridStyleNames: array[TGridStyle] of string = (
+    'rows', 'columns'
+  );
+
+
 { TDescriptionsLoaderDM }
+
+function GetGridStyleByName(AName: string): TGridStyle;
+var
+  S: TGridStyle;
+begin
+  for S := Low(TGridStyle) to High(TGridStyle) do
+    if cGridStyleNames[S] = AName then
+    begin
+      Result := S;
+      Exit;
+    end;
+  raise Exception.CreateFmt('Вид грида "%s" не найден', [AName]);
+end;
+
 
 function GetParamDirectionByName(AName: string): TParamDirection;
 var
@@ -232,6 +251,7 @@ begin
     P.EnablerParamName := BlockParamsQuery.FieldByName('enabler_param').AsString;
     P.OrderNum := BlockParamsQuery.FieldByName('order_num').AsInteger;
     P.CallOrderNum := BlockParamsQuery.FieldByName('call_order_num').AsInteger;
+    P.DefaultValue := BlockParamsQuery.FieldByName('default_value').AsString;
 
     FLoadedParams.Add(P);
     BlockParamsQuery.Next;
@@ -341,9 +361,11 @@ begin
   if not ProceduresQuery.Locate('id', ProcedureName, []) then
     raise Exception.CreateFmt('Описание процедуры не найдено: %s', [ProcedureName]);
   FillBlockDescription(ADescription);
-  ADescription.ProcedureName := ProceduresQuery.FieldByName('procedure_name').AsString;
   ADescription.ProcedureOwner := ProceduresQuery.FieldByName('procedure_owner').AsString;
+  ADescription.PackageName := ProceduresQuery.FieldByName('package_name').AsString;
+  ADescription.ProcedureName := ProceduresQuery.FieldByName('procedure_name').AsString;
   ADescription.ForceSave := ProceduresQuery.FieldByName('force_save').AsInteger <> 0;
+  ADescription.GridStyle := GetGridStyleByName(ProceduresQuery.FieldByName('grid_style').AsString);
 end;
 
 procedure TDescriptionsLoaderDM.LoadForm(AID: string; ADescription: TFormDescription);
@@ -372,7 +394,11 @@ begin
   do
   begin
     ChildId := FormChildsQuery.FieldByName('id').AsInteger;
-    BlocksQuery.Locate('id', FormChildsQuery.FieldByName('block').AsString, []);
+    if not BlocksQuery.Locate('id', FormChildsQuery.FieldByName('block').AsString, []) then
+      raise Exception.CreateFmt(
+        'Блок %s не найден в форме %s',
+        [FormChildsQuery.FieldByName('block').AsString, FormName]
+      );
     if not F.Blocks.TryGetValue(ChildId, C) then
     begin
       C := CreateBlock;

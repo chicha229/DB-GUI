@@ -16,7 +16,7 @@ begin
       c.id, p.form, c.block, coalesce(c.caption, b.name), c.panel, c.order_num,
       c.param_group_align, c.param_align, c.visible
     from ui$form_child c
-    join ui$form_panel p on p.id = c.panel
+    join ui$form_panel p on p.id = c.panel and p.form = c.form
     join ui$block b on b.id = c.block
     order by p.form, c.panel, c.order_num
     into

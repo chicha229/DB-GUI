@@ -7,7 +7,7 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Avk.Gui.BaseFrame, cxGraphics,
   cxControls, cxLookAndFeels, cxLookAndFeelPainters, cxContainer, cxEdit,
   cxScrollBox, cxLabel, System.Generics.Collections, Vcl.StdCtrls,
-
+  CodeSiteLogging,
   Avk.Gui.Descriptions, Vcl.ExtCtrls, cxGroupBox, cxPCdxBarPopupMenu, cxPC,
   cxTextEdit, uFormErrors, dxSkinsCore, Avk.Gui.Connection,
   dxBar, cxClasses, dxSkinsDefaultPainters, dxSkinsdxBarPainter;
@@ -49,6 +49,7 @@ type
     FRefParamValues: TParamValues;
     FTransaction: ITransaction;
     FIsTransactionStart: boolean;
+    FLogDetails: TStrings;
 
     procedure SetBlockDescription(const Value: TBlockDescription);
     procedure CreateParamEditors;
@@ -62,6 +63,8 @@ type
     procedure FillFormErrors;
     procedure SetOwnerFrame(const Value: TBlockFrame);
     procedure SetIsTransactionStart(const Value: boolean);
+    procedure SetDefaultParamValues;
+    procedure SaveFrameBoundsRect;
   protected
     procedure SetTransaction(const Value: ITransaction); virtual;
   public
@@ -109,6 +112,9 @@ type
     function Open: boolean; virtual;
     function Save: boolean; virtual;
 
+    procedure SaveFrameSettings; override;
+    procedure LoadFrameSettings; override;
+
     function Modified: boolean; virtual;
     procedure DropChanges; virtual;
     function ConfirmCancel: boolean; virtual;
@@ -137,6 +143,8 @@ type
 
   TBlockFrameClass = class of TBlockFrame;
 
+  function BlockLogger: TCodeSiteLogger;
+
 implementation
 
 {$R *.dfm}
@@ -147,7 +155,8 @@ uses
   cxBlobEdit, cxMemo, cxImage,
   cxDBLookupComboBox, uADCompClient,
   AVK.DX.LookupFilter,
-  Avk.Gui.CustomMainDM, Avk.Gui.CustomMainForm, AVK.Core.Utils;
+  Avk.Gui.CustomMainDM, Avk.Gui.CustomMainForm, AVK.Core.Utils,
+  Avk.Core.StrConverts;
 
 type
   TcxCustomEditCrack = class (TcxCustomEdit)
@@ -156,9 +165,11 @@ type
 
 const
   cIsNull = '_IS_NULL';
+  BlockBoundsSettingsName: string = 'BLOCK_RECT';
 
 var
   gParamChangeId: Int64 = 1;
+  gBlockActionLogger: TCodeSiteLogger;
 
   AllowedFieldTypes: set of TFieldType = [ftUnknown..ftFMTBcd];
   FieldEditorClasses: array [ftUnknown..ftFMTBcd] of TcxCustomEditClass = (
@@ -202,10 +213,21 @@ var
     TcxCalcEdit         // ftFMTBcd
   );
 
+function BlockLogger: TCodeSiteLogger;
+begin
+  if not Assigned(gBlockActionLogger) then
+  begin
+    gBlockActionLogger := TCodeSiteLogger.Create(nil);
+    gBlockActionLogger.Category := 'BlockAction';
+  end;
+  Result := gBlockActionLogger;
+end;
+
 { TBlockFrame }
 
 destructor TBlockFrame.Destroy;
 begin
+  SaveFrameBoundsRect;
   FParamControls.Free;
   FRefControls.Free;
   FGroupControls.Free;
@@ -213,6 +235,8 @@ begin
   FChangedParams.Free;
   FUnchangedParams.Free;
   FRefParamValues.Free;
+  FLogDetails.Free;
+  FTransaction := nil;
   inherited;
 end;
 
@@ -254,7 +278,9 @@ end;
 
 function TBlockFrame.FrameSectionName: string;
 begin
-  if not Assigned(FBlockDescription) then
+  if Assigned(OwnerFrame) then
+    Result := OwnerFrame.BlockDescription.Name + '.' + FBlockDescription.Name + 'Frame'
+  else if not Assigned(FBlockDescription) then
     Result := inherited FrameSectionName
   else
     Result := FBlockDescription.Name + 'Frame';
@@ -265,6 +291,19 @@ begin
   TopLabel.Visible := false;
   BarManagerMenuBar.Visible := false;
   BarManagerToolBar.Visible := false;
+end;
+
+procedure TBlockFrame.LoadFrameSettings;
+var
+  R: string;
+begin
+  inherited;
+  if Assigned(OwnerFrame) then
+  begin
+    R := LoadFrameSettingsValue(BlockBoundsSettingsName);
+    if R <> '' then
+      Self.BoundsRect := StringToRect(R);
+  end;
 end;
 
 function TBlockFrame.Modified: boolean;
@@ -317,6 +356,7 @@ begin
   FRefParamValues := TParamValues.Create;
   FParamValues := TParamValues.Create;
   FUnchangedParams := TStringList.Create;
+  FLogDetails := TStringList.Create;
 end;
 
 procedure TBlockFrame.DeleteParamsEditors;
@@ -765,6 +805,34 @@ begin
     end;
 end;
 
+  function LogParamValues: TStrings;
+  var
+    AParamValues: TParamValues;
+    ParamName: string;
+    ParamValue: variant;
+  begin
+    FLogDetails.Clear;
+
+    FLogDetails.Add(Format('Self = %s', [BlockDescription.Name]));
+    FLogDetails.Add(Format('Sender = %s', [Sender.BlockDescription.Name]));
+    FLogDetails.Add('');
+
+    AParamValues := Sender.ChangedParams[AChangeId];
+    for ParamName in AParamValues.Keys do
+    begin
+      try
+        if VarIsNull(AParamValues[ParamName]) then
+          ParamValue := ''
+        else
+          VarCast(ParamValue, AParamValues[ParamName], varString);
+      except
+        ParamValue := '';
+      end;
+      FLogDetails.Add(Format('%s = %s', [ParamName, ParamValue]));
+    end;
+    Result := FLogDetails;
+  end;
+
 begin
 {
   обновл€ем свои (процедуры) Ref параметры и запросы
@@ -808,6 +876,7 @@ begin
   в OnChangeParamValues
 }
 
+  BlockLogger.Send('OnChangeParamValues', LogParamValues);
   RefreshRefQueries;
   if Assigned(OwnerFrame) then
     OwnerFrame.OnChangeParamValues(Self, AChangeId);
@@ -883,6 +952,46 @@ begin
     end;
 end;
 
+function Str2VariantDefault(ADataType: TFieldType; AValue: string): variant;
+begin
+  if AValue = '' then
+  begin
+    Result := Null;
+    Exit;
+  end;
+  case ADataType of
+    ftString:
+      if AValue = '' then
+        Result := null
+      else
+        Result := AValue;
+    ftBoolean:
+      if AValue = 'true' then
+        Result := 1
+      else
+        Result := 0;
+    ftDate, ftDateTime:
+      Result := StrToDateExp(AValue);
+    ftInteger, ftSmallint, ftShortint, ftWord, ftCurrency, ftBCD, ftLargeint, ftFloat:
+      Result := StrToFloatExp(AValue);
+    else
+      Result := Null;
+  end;
+end;
+
+procedure TBlockFrame.SetDefaultParamValues;
+var
+  P: TParamDescription;
+begin
+  for P in BlockDescription.Params.Values do
+  begin
+    if (P.ParamDirection in [pdIn, pdInOut]) and (P.DefaultValue <> '') then
+      ParamValues.AddOrSetValue(P.Name, Str2VariantDefault(P.DataType, P.DefaultValue));
+
+  end;
+  ;
+end;
+
 procedure TBlockFrame.AssignParamValues(AValues: TParamValues);
 begin
   AddParamValues(AValues, FParamValues);
@@ -905,6 +1014,7 @@ begin
   Parent := AParent;
   Align := alClient;
   CreateActions;
+  SetDefaultParamValues;
   OpenRefParamLookups;
   SetFilterToLookups(ParamsScrollBox);
   ParamValuesToEditors;
@@ -915,6 +1025,12 @@ begin
   Result := false;
 end;
 
+procedure TBlockFrame.SaveFrameSettings;
+begin
+  inherited;
+  SaveFrameBoundsRect;
+end;
+
 procedure TBlockFrame.SaveParamValues(AValues: TParamValues);
 var
   ParamName: string;
@@ -923,6 +1039,12 @@ begin
   for ParamName in ParamValues.Keys do
     if BlockDescription.ParamByName(ParamName).ParamDirection in [pdOut, pdInOut] then
       AValues.AddOrSetValue(ParamName, ParamValues[ParamName]);
+end;
+
+procedure TBlockFrame.SaveFrameBoundsRect;
+begin
+  if Assigned(OwnerFrame) then
+    SaveFrameSettingsValue(BlockBoundsSettingsName, RectToString(Self.BoundsRect));
 end;
 
 procedure TBlockFrame.SaveViewBarButtonClick(Sender: TObject);
@@ -1015,5 +1137,13 @@ procedure TParamControls.SetLabelControl(const Value: TLabel);
 begin
   FLabelControl := Value;
 end;
+
+initialization
+  ;
+
+finalization
+  begin
+    gBlockActionLogger.Free;
+  end;
 
 end.

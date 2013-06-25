@@ -126,7 +126,6 @@ begin
 
   -- заполняем поля расшифровки
   l_join_fields = '';
-  l_last_constraint_name = '';
   for
     select
       tl.fk_name, tl.field_name, lp.param, lp.index_in_name,

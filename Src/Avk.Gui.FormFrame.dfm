@@ -7,8 +7,8 @@ inherited FormFrame: TFormFrame
     AnchorY = 20
   end
   inherited ClientPanel: TPanel
-    Height = 238
-    ExplicitHeight = 238
+    Height = 236
+    ExplicitHeight = 236
     inherited ParamsScrollBox: TScrollBox
       Height = 57
       Align = alTop
@@ -18,7 +18,7 @@ inherited FormFrame: TFormFrame
       Left = 0
       Top = 57
       Width = 463
-      Height = 181
+      Height = 179
       Align = alClient
       BorderStyle = bsNone
       TabOrder = 1
@@ -28,7 +28,7 @@ inherited FormFrame: TFormFrame
     DockControlHeights = (
       0
       0
-      49
+      51
       0)
   end
 end

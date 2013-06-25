@@ -17,6 +17,7 @@ type
     TreeSplitter: TcxSplitter;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
   private
     { Private declarations }
     FGuiObjectsFrame: TBlockFrame;
@@ -58,7 +59,7 @@ uses
 procedure TCustomMainForm.FormCreate(Sender: TObject);
 begin
   CustomMainForm := Self;
-  CustomMainDM := Self.GetMainDMClass.Create(Application);
+  CustomMainDM := Self.GetMainDMClass.Create(nil);
   CustomMainDM.Connection.Connect;
   TDescriptionsLoaderDM.Execute;
 
@@ -66,7 +67,7 @@ begin
     BlocksManager.Blocks['UI$MENU_CR'],
     CustomMainDM.MainTransaction,
     false,
-    Self
+    nil
   );
   FGuiObjectsFrame.Build(Self);
   FGuiObjectsFrame.Open;
@@ -75,6 +76,12 @@ begin
   TreeSplitter.Left := FGuiObjectsFrame.Width + 1;
   TreeSplitter.Control := FGuiObjectsFrame;
   FormsPageControl.Align := alClient;
+end;
+
+procedure TCustomMainForm.FormDestroy(Sender: TObject);
+begin
+  FGuiObjectsFrame.Free;
+  CustomMainDM.Free;
 end;
 
 procedure TCustomMainForm.FormShow(Sender: TObject);
@@ -165,9 +172,9 @@ begin
     AIsTransactionStart,
     FrameParent
   );
+  Frame.Build(FrameParent);
   if Assigned(AParamValues) then
     Frame.AssignParamValues(AParamValues);
-  Frame.Build(FrameParent);
   Frame.Open;
   if Assigned(Form) then
   begin

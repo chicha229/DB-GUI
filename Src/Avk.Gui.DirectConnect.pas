@@ -5,14 +5,16 @@ interface
 uses
   DB,
   uADCompClient,
+  CodeSiteLogging,
   Avk.Gui.Connection, Avk.Gui.Descriptions;
 
 type
   TDirectTransaction = class (TInterfacedObject, ITransaction)
   private
     FTransaction: TADTransaction;
-    FCmd: TADCommand;
   protected
+    FCmd: TADCommand;
+
     function GetTransaction: TADTransaction;
     procedure LogTransactionAction(AAction: string);
     procedure ExecSql(ASql: string);
@@ -84,15 +86,27 @@ procedure FillDataSetFields(
   AProcedureDescription: TProcedureDescription
 );
 
+function DBLogger: TCodeSiteLogger;
+
 implementation
 
 uses
   System.Classes, SysUtils, Variants,
-  CodeSiteLogging,
   uADStanParam;
 
 var
   GLogDetails: TStringList;
+  GDBLogger: TCodeSiteLogger;
+
+function DBLogger: TCodeSiteLogger;
+begin
+  if not Assigned(GDBLogger) then
+  begin
+    GDBLogger := TCodeSiteLogger.Create(nil);
+    GDBLogger.Category := 'DB';
+  end;
+  Result := GDBLogger;
+end;
 
 procedure FillQueryParams(
   AQuery: TADQuery;
@@ -258,8 +272,9 @@ end;
 
 destructor TDirectTransaction.Destroy;
 begin
-  FTransaction.Free;
+  Rollback;
   FCmd.Free;
+  FTransaction.Free;
   inherited;
 end;
 
@@ -288,7 +303,7 @@ begin
       end;
       GLogDetails.Add(Format('%s = %s', [ParamName, ParamValue]));
     end;
-  CodeSite.Send(Msg, GLogDetails);
+  DBLogger.Send(Msg, GLogDetails);
 end;
 
 procedure TDirectTransaction.ExecSql(ASql: string);
@@ -310,7 +325,7 @@ end;
 
 procedure TDirectTransaction.LogTransactionAction(AAction: string);
 begin
-  CodeSite.Send(AAction, Integer(GetTransaction));
+  DBLogger.Send(AAction, Integer(GetTransaction));
 end;
 
 procedure TDirectTransaction.MakeSavepoint(const AName: string);
@@ -335,7 +350,7 @@ end;
 
 procedure TDirectTransaction.RollbackRetaining;
 begin
-  CodeSite.Send('rollback retaining');
+  LogTransactionAction('rollback retaining');
 end;
 
 procedure TDirectTransaction.RollbackToSavepoint(const AName: string);
@@ -356,6 +371,7 @@ end;
 finalization
 begin
   GLogDetails.Free;
+  GDBLogger.Free;
 end;
 
 end.
